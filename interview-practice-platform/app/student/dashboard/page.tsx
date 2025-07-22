@@ -37,23 +37,23 @@ export default function StudentDashboard() {
         <div className="grid md:grid-cols-3 gap-6">
           <Card
             className="hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => router.push("/student/video-interview")}
+            onClick={() => router.push("/student/resume-advisor")}
           >
             <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                <Video className="w-8 h-8 text-red-600" />
+              <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-purple-600" />
               </div>
-              <CardTitle className="text-xl">錄影面試練習</CardTitle>
-              <CardDescription>進行模擬面試錄影，系統將同步分析語音、表情與眼神</CardDescription>
+              <CardTitle className="text-xl">履歷撰寫建議</CardTitle>
+              <CardDescription>上傳自傳與學習歷程，獲得AI優化建議</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm text-gray-600">
-                <div>• 題目提示與引導</div>
-                <div>• 語音與表情同步記錄</div>
-                <div>• 眼神接觸分析</div>
-                <div>• 自動上傳與AI分析</div>
+                <div>• 邏輯結構分析</div>
+                <div>• 動機明確度評估</div>
+                <div>• 語句潤飾建議</div>
+                <div>• 段落重寫輔助</div>
               </div>
-              <Button className="w-full mt-4 bg-red-600 hover:bg-red-700">開始錄影</Button>
+              <Button className="w-full mt-4 bg-purple-600 hover:bg-purple-700">開始優化</Button>
             </CardContent>
           </Card>
 
@@ -81,23 +81,23 @@ export default function StudentDashboard() {
 
           <Card
             className="hover:shadow-lg transition-shadow cursor-pointer"
-            onClick={() => router.push("/student/resume-advisor")}
+            onClick={() => router.push("/student/video-interview")}
           >
             <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-                <FileText className="w-8 h-8 text-purple-600" />
+              <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <Video className="w-8 h-8 text-red-600" />
               </div>
-              <CardTitle className="text-xl">履歷撰寫建議</CardTitle>
-              <CardDescription>上傳自傳與學習歷程，獲得AI優化建議</CardDescription>
+              <CardTitle className="text-xl">錄影面試練習</CardTitle>
+              <CardDescription>進行模擬面試錄影，系統將同步分析語音、表情與眼神</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 text-sm text-gray-600">
-                <div>• 邏輯結構分析</div>
-                <div>• 動機明確度評估</div>
-                <div>• 語句潤飾建議</div>
-                <div>• 段落重寫輔助</div>
+                <div>• 題目提示與引導</div>
+                <div>• 語音與表情同步記錄</div>
+                <div>• 眼神接觸分析</div>
+                <div>• 自動上傳與AI分析</div>
               </div>
-              <Button className="w-full mt-4 bg-purple-600 hover:bg-purple-700">開始優化</Button>
+              <Button className="w-full mt-4 bg-red-600 hover:bg-red-700">開始錄影</Button>
             </CardContent>
           </Card>
         </div>
