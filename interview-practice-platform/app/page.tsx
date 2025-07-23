@@ -1,99 +1,71 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { GraduationCap, Users, BookOpen, Video, FileText, BarChart3 } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export default function LoginPage() {
-  const [selectedRole, setSelectedRole] = useState<"student" | "teacher" | null>(null)
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const handleLogin = () => {
-    if (selectedRole === "student") {
-      router.push("/student/dashboard")
-    } else if (selectedRole === "teacher") {
-      router.push("/teacher/dashboard")
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await res.json()
+      if (data.success) {
+        if (data.role === "student") {
+          router.push("/student/dashboard")
+        } else if (data.role === "teacher") {
+          router.push("/teacher/dashboard")
+        } else {
+          setError("未知身份，請聯繫管理員")
+        }
+      } else {
+        setError(data.message || "登錄失敗")
+      }
+    } catch (err) {
+      setError("伺服器錯誤")
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">面試練習平台</h1>
-          <p className="text-lg text-gray-600">選擇您的角色開始使用</p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Card
-            className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-              selectedRole === "student" ? "ring-2 ring-blue-500 bg-blue-50" : ""
-            }`}
-            onClick={() => setSelectedRole("student")}
-          >
-            <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-                <GraduationCap className="w-8 h-8 text-blue-600" />
-              </div>
-              <CardTitle className="text-2xl">學生</CardTitle>
-              <CardDescription>練習面試技巧，獲得AI回饋</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Video className="w-4 h-4" />
-                  <span>錄影面試練習</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <FileText className="w-4 h-4" />
-                  <span>書面問答練習</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <BarChart3 className="w-4 h-4" />
-                  <span>AI評分與建議</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
-              selectedRole === "teacher" ? "ring-2 ring-green-500 bg-green-50" : ""
-            }`}
-            onClick={() => setSelectedRole("teacher")}
-          >
-            <CardHeader className="text-center">
-              <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <Users className="w-8 h-8 text-green-600" />
-              </div>
-              <CardTitle className="text-2xl">教師</CardTitle>
-              <CardDescription>管理學生，提供指導建議</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Users className="w-4 h-4" />
-                  <span>檢視學生列表</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <BookOpen className="w-4 h-4" />
-                  <span>評閱學生作品</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <BarChart3 className="w-4 h-4" />
-                  <span>AI分析輔助</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="text-center">
-          <Button onClick={handleLogin} disabled={!selectedRole} size="lg" className="px-8 py-3 text-lg">
-            {selectedRole === "student" ? "進入學生端" : selectedRole === "teacher" ? "進入教師端" : "請選擇角色"}
-          </Button>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
+        <h1 className="text-3xl font-bold text-center mb-6">登錄</h1>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <Input
+            type="text"
+            placeholder="用戶名"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            required
+          />
+          <Input
+            type="password"
+            placeholder="密碼"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+          />
+          {error && <div className="text-red-500 text-sm text-center">{error}</div>}
+          <Button type="submit" className="w-full" disabled={loading}>{loading ? "登錄中..." : "登錄"}</Button>
+        </form>
+        <div className="text-center mt-4">
+          還沒有帳號？
+          <Button variant="link" onClick={() => router.push("/register")}>註冊</Button>
         </div>
       </div>
     </div>
