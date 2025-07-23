@@ -72,7 +72,7 @@ export default function AIFeedback() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -81,10 +81,10 @@ export default function AIFeedback() {
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 返回
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">AI 評分報告</h1>
+              <h1 className="text-xl font-semibold text-pink-600">AI 評分報告</h1>
             </div>
-            <Button onClick={downloadReport} className="bg-blue-600 hover:bg-blue-700">
-              <Download className="w-4 h-4 mr-2" />
+            <Button onClick={downloadReport} className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white">
+              <Download className="w-4 h-4 mr-2 text-pink-200" />
               下載報告
             </Button>
           </div>
@@ -93,14 +93,14 @@ export default function AIFeedback() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6">
+          <div className="bg-gradient-to-r from-green-400 via-blue-400 to-pink-400 text-white rounded-lg p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-3xl font-bold mb-2">整體評分</h2>
+                <h2 className="text-3xl font-bold mb-2 text-pink-100">整體評分</h2>
                 <p className="text-blue-100">基於您的面試表現綜合分析</p>
               </div>
               <div className="text-right">
-                <div className="text-5xl font-bold">{overallScore}</div>
+                <div className="text-5xl font-bold text-pink-200">{overallScore}</div>
                 <div className="text-blue-100">/ 100</div>
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function AIFeedback() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-pink-100 via-blue-100 to-green-100">
             <TabsTrigger value="overview">總覽</TabsTrigger>
             <TabsTrigger value="detailed">詳細分析</TabsTrigger>
             <TabsTrigger value="video">語音視覺</TabsTrigger>
@@ -118,9 +118,9 @@ export default function AIFeedback() {
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card>
+              <Card className="bg-gradient-to-br from-purple-100 to-purple-200">
                 <CardHeader>
-                  <CardTitle>能力雷達圖</CardTitle>
+                  <CardTitle className="text-pink-600">能力雷達圖</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -139,9 +139,9 @@ export default function AIFeedback() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-green-100 to-green-200">
                 <CardHeader>
-                  <CardTitle>表現亮點</CardTitle>
+                  <CardTitle className="text-green-600">表現亮點</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -171,9 +171,9 @@ export default function AIFeedback() {
               </Card>
             </div>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-orange-100 to-yellow-100">
               <CardHeader>
-                <CardTitle>需要改善的地方</CardTitle>
+                <CardTitle className="text-orange-600">需要改善的地方</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">

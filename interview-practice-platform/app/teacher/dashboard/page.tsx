@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -60,6 +60,10 @@ export default function TeacherDashboard() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [username, setUsername] = useState("")
+  useEffect(() => {
+    setUsername(window.localStorage.getItem("username") || "")
+  }, [])
 
   const filteredStudents = students.filter((student) => {
     const matchesSearch =
@@ -95,18 +99,23 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
+      <header className="bg-white/80 shadow-md border-b sticky top-0 z-10 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-semibold text-gray-900">教師管理平台</h1>
+            <h1 className="text-2xl font-bold text-pink-600 tracking-tight drop-shadow">
+              教師管理平台
+            </h1>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <User className="w-5 h-5 text-gray-500" />
-                <span className="text-sm text-gray-700">王老師</span>
+                <User className="w-5 h-5 text-green-400" />
+                <span className="text-sm text-gray-700 font-medium">{username || "用戶"}</span>
               </div>
-              <Button variant="outline" size="sm" onClick={() => router.push("/")}>
-                <LogOut className="w-4 h-4 mr-2" />
+              <Button variant="outline" size="sm" onClick={() => {
+                window.localStorage.removeItem("username");
+                router.push("/")
+              }} className="border-pink-200">
+                <LogOut className="w-4 h-4 mr-2 text-pink-400" />
                 登出
               </Button>
             </div>
@@ -114,48 +123,48 @@ export default function TeacherDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">學生管理</h2>
-          <p className="text-gray-600">檢視和管理學生的面試練習進度</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mb-10">
+          <h2 className="text-4xl font-extrabold text-pink-600 mb-2 tracking-tight">學生管理</h2>
+          <p className="text-lg text-blue-500">檢視和管理學生的面試練習進度</p>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card>
+        <div className="grid md:grid-cols-4 gap-8 mb-10">
+          <Card className="rounded-2xl border-0 shadow-lg bg-gradient-to-br from-purple-100 to-purple-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">總學生數</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{students.length}</div>
+              <div className="text-3xl font-bold text-purple-700">{students.length}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="rounded-2xl border-0 shadow-lg bg-gradient-to-br from-green-100 to-green-200">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">已完成</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-3xl font-bold text-green-600">
                 {students.filter((s) => s.videoStatus === "completed" && s.writtenStatus === "completed").length}
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="rounded-2xl border-0 shadow-lg bg-gradient-to-br from-orange-100 to-yellow-100">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">進行中</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
+              <div className="text-3xl font-bold text-orange-600">
                 {students.filter((s) => s.videoStatus === "pending" || s.writtenStatus === "pending").length}
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="rounded-2xl border-0 shadow-lg bg-gradient-to-br from-blue-100 to-cyan-100">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">平均分數</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-3xl font-bold text-blue-600">
                 {Math.round(
                   students.filter((s) => s.overallScore).reduce((sum, s) => sum + (s.overallScore || 0), 0) /
                     students.filter((s) => s.overallScore).length,
@@ -166,16 +175,16 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Search and Filter */}
-        <Card className="mb-6">
+        <Card className="mb-8 rounded-2xl border-0 shadow-lg bg-white/90">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pink-300 w-4 h-4" />
                 <Input
                   placeholder="搜尋學生姓名或學校..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 rounded-xl border-pink-200"
                 />
               </div>
               <div className="flex gap-2">
@@ -183,6 +192,7 @@ export default function TeacherDashboard() {
                   variant={filterStatus === "all" ? "default" : "outline"}
                   onClick={() => setFilterStatus("all")}
                   size="sm"
+                  className="rounded-xl"
                 >
                   全部
                 </Button>
@@ -190,6 +200,7 @@ export default function TeacherDashboard() {
                   variant={filterStatus === "completed" ? "default" : "outline"}
                   onClick={() => setFilterStatus("completed")}
                   size="sm"
+                  className="rounded-xl"
                 >
                   已完成
                 </Button>
@@ -197,6 +208,7 @@ export default function TeacherDashboard() {
                   variant={filterStatus === "pending" ? "default" : "outline"}
                   onClick={() => setFilterStatus("pending")}
                   size="sm"
+                  className="rounded-xl"
                 >
                   待完成
                 </Button>
@@ -206,25 +218,25 @@ export default function TeacherDashboard() {
         </Card>
 
         {/* Students List */}
-        <div className="space-y-4">
+        <div className="space-y-6">
           {filteredStudents.map((student) => (
-            <Card key={student.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
+            <Card key={student.id} className="hover:shadow-2xl transition-all duration-200 rounded-2xl border-0 bg-gradient-to-br from-white via-pink-50 to-blue-50">
+              <CardContent className="pt-8 pb-6">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="w-6 h-6 text-blue-600" />
+                    <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center shadow">
+                      <User className="w-7 h-7 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-lg">{student.name}</h3>
-                      <p className="text-gray-600 text-sm">{student.school}</p>
+                      <h3 className="font-semibold text-xl text-pink-600">{student.name}</h3>
+                      <p className="text-gray-600 text-base">{student.school}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-8">
                     <div className="text-center">
                       <div className="flex items-center gap-2 mb-1">
-                        <Video className="w-4 h-4 text-gray-500" />
+                        <Video className="w-4 h-4 text-orange-400" />
                         <span className="text-sm text-gray-600">錄影面試</span>
                       </div>
                       {getStatusBadge(student.videoStatus)}
@@ -232,7 +244,7 @@ export default function TeacherDashboard() {
 
                     <div className="text-center">
                       <div className="flex items-center gap-2 mb-1">
-                        <FileText className="w-4 h-4 text-gray-500" />
+                        <FileText className="w-4 h-4 text-blue-400" />
                         <span className="text-sm text-gray-600">書面問答</span>
                       </div>
                       {getStatusBadge(student.writtenStatus)}
@@ -240,7 +252,7 @@ export default function TeacherDashboard() {
 
                     <div className="text-center">
                       <div className="flex items-center gap-2 mb-1">
-                        <CheckCircle className="w-4 h-4 text-gray-500" />
+                        <CheckCircle className="w-4 h-4 text-green-400" />
                         <span className="text-sm text-gray-600">總分</span>
                       </div>
                       {getScoreBadge(student.overallScore)}
@@ -248,7 +260,7 @@ export default function TeacherDashboard() {
 
                     <div className="text-center">
                       <div className="flex items-center gap-2 mb-1">
-                        <Clock className="w-4 h-4 text-gray-500" />
+                        <Clock className="w-4 h-4 text-pink-400" />
                         <span className="text-sm text-gray-600">最後活動</span>
                       </div>
                       <span className="text-xs text-gray-500">{student.lastActivity}</span>
@@ -256,7 +268,7 @@ export default function TeacherDashboard() {
 
                     <Button
                       onClick={() => router.push(`/teacher/student/${student.id}`)}
-                      className="bg-blue-600 hover:bg-blue-700"
+                      className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white font-semibold px-6 py-2 rounded-xl shadow"
                     >
                       查看詳情
                     </Button>
@@ -268,11 +280,11 @@ export default function TeacherDashboard() {
         </div>
 
         {filteredStudents.length === 0 && (
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="rounded-2xl border-0 shadow-lg bg-gradient-to-br from-white via-pink-50 to-blue-50">
+            <CardContent className="pt-8 pb-6">
               <div className="text-center py-8">
-                <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">沒有找到學生</h3>
+                <User className="w-14 h-14 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-medium text-pink-600 mb-2">沒有找到學生</h3>
                 <p className="text-gray-600">請調整搜尋條件或篩選設定</p>
               </div>
             </CardContent>

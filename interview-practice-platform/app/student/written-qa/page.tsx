@@ -96,15 +96,15 @@ export default function WrittenQA() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Button variant="ghost" onClick={() => router.push("/student/dashboard")} className="mr-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <Button variant="ghost" onClick={() => router.push("/student/dashboard")} className="mr-4 text-pink-600 hover:bg-pink-100">
+              <ArrowLeft className="w-4 h-4 mr-2 text-pink-400" />
               返回
             </Button>
-            <h1 className="text-xl font-semibold text-gray-900">書面問答</h1>
+            <h1 className="text-xl font-semibold text-pink-600">書面問答</h1>
           </div>
         </div>
       </header>
@@ -112,20 +112,18 @@ export default function WrittenQA() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">
-              題目 {currentQuestion + 1} / {questions.length}
-            </h2>
-            <div className="text-sm text-gray-500">建議字數：150-250字</div>
+            <h2 className="text-2xl font-bold text-pink-600">題目 {currentQuestion + 1} / {questions.length}</h2>
+            <div className="text-sm text-blue-500">建議字數：150-250字</div>
           </div>
-          <Progress value={((currentQuestion + 1) / questions.length) * 100} className="mb-4" />
+          <Progress value={((currentQuestion + 1) / questions.length) * 100} className="mb-4 bg-gradient-to-r from-pink-200 via-blue-200 to-green-200" />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-100 to-cyan-100">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-blue-700">
+                  <FileText className="w-5 h-5 text-pink-400" />
                   {questions[currentQuestion].question}
                 </CardTitle>
               </CardHeader>
@@ -144,10 +142,10 @@ export default function WrittenQA() {
                 <div className="flex justify-between items-center mt-4">
                   <div className="text-sm text-gray-500">字數：{analysis.wordCount}</div>
                   <div className="flex gap-2">
-                    <Button onClick={prevQuestion} disabled={currentQuestion === 0} variant="outline">
+                    <Button onClick={prevQuestion} disabled={currentQuestion === 0} variant="outline" className="border-pink-200 text-pink-600">
                       上一題
                     </Button>
-                    <Button onClick={nextQuestion} className="bg-blue-600 hover:bg-blue-700">
+                    <Button onClick={nextQuestion} className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white">
                       {currentQuestion === questions.length - 1 ? "完成作答" : "下一題"}
                     </Button>
                   </div>
@@ -157,9 +155,9 @@ export default function WrittenQA() {
           </div>
 
           <div className="space-y-6">
-            <Card>
+            <Card className="bg-gradient-to-br from-green-100 to-green-200">
               <CardHeader>
-                <CardTitle>即時分析</CardTitle>
+                <CardTitle className="text-green-700">即時分析</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
@@ -206,9 +204,9 @@ export default function WrittenQA() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-pink-100 to-purple-100">
               <CardHeader>
-                <CardTitle>作答進度</CardTitle>
+                <CardTitle className="text-pink-600">作答進度</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">

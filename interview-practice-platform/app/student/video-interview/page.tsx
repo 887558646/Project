@@ -80,15 +80,15 @@ export default function VideoInterview() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Button variant="ghost" onClick={() => router.push("/student/dashboard")} className="mr-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <Button variant="ghost" onClick={() => router.push("/student/dashboard")} className="mr-4 text-pink-600 hover:bg-pink-100">
+              <ArrowLeft className="w-4 h-4 mr-2 text-pink-400" />
               返回
             </Button>
-            <h1 className="text-xl font-semibold text-gray-900">錄影面試</h1>
+            <h1 className="text-xl font-semibold text-pink-600">錄影面試</h1>
           </div>
         </div>
       </header>
@@ -96,20 +96,18 @@ export default function VideoInterview() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">
-              題目 {currentQuestion + 1} / {questions.length}
-            </h2>
-            <div className="text-sm text-gray-500">預計時間：2-3分鐘</div>
+            <h2 className="text-2xl font-bold text-pink-600">題目 {currentQuestion + 1} / {questions.length}</h2>
+            <div className="text-sm text-blue-500">預計時間：2-3分鐘</div>
           </div>
-          <Progress value={((currentQuestion + 1) / questions.length) * 100} className="mb-4" />
+          <Progress value={((currentQuestion + 1) / questions.length) * 100} className="mb-4 bg-gradient-to-r from-pink-200 via-blue-200 to-green-200" />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="bg-gradient-to-br from-orange-100 to-red-100">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Video className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-red-700">
+                  <Video className="w-5 h-5 text-orange-400" />
                   錄影區域
                 </CardTitle>
               </CardHeader>
@@ -134,7 +132,7 @@ export default function VideoInterview() {
 
                 <div className="flex justify-center gap-4">
                   {!isRecording ? (
-                    <Button onClick={startRecording} className="bg-red-600 hover:bg-red-700">
+                    <Button onClick={startRecording} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-red-500 hover:to-orange-500 text-white">
                       <Play className="w-4 h-4 mr-2" />
                       開始錄影
                     </Button>
@@ -158,9 +156,9 @@ export default function VideoInterview() {
           </div>
 
           <div className="space-y-6">
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-100 to-cyan-100">
               <CardHeader>
-                <CardTitle>面試題目</CardTitle>
+                <CardTitle className="text-blue-700">面試題目</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="bg-blue-50 p-4 rounded-lg">
@@ -177,9 +175,9 @@ export default function VideoInterview() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-green-100 to-green-200">
               <CardHeader>
-                <CardTitle>即時分析</CardTitle>
+                <CardTitle className="text-green-700">即時分析</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>

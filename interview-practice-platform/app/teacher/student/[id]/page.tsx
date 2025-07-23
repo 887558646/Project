@@ -62,30 +62,30 @@ export default function StudentDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
+      <header className="bg-white/80 shadow-md border-b sticky top-0 z-10 backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Button variant="ghost" onClick={() => router.push("/teacher/dashboard")} className="mr-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <Button variant="ghost" onClick={() => router.push("/teacher/dashboard")} className="mr-4 text-pink-600 hover:bg-pink-100">
+              <ArrowLeft className="w-4 h-4 mr-2 text-pink-400" />
               返回學生列表
             </Button>
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">{studentData.name}</h1>
-                <p className="text-sm text-gray-600">{studentData.school}</p>
+                <h1 className="text-2xl font-bold text-pink-600 tracking-tight drop-shadow">{studentData.name}</h1>
+                <p className="text-sm text-blue-500">{studentData.school}</p>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-pink-100 via-blue-100 to-green-100">
             <TabsTrigger value="video">錄影面試</TabsTrigger>
             <TabsTrigger value="written">書面問答</TabsTrigger>
             <TabsTrigger value="resume">履歷檔案</TabsTrigger>
@@ -94,9 +94,9 @@ export default function StudentDetail() {
           </TabsList>
 
           <TabsContent value="video" className="space-y-6">
-            <Card>
+            <Card className="bg-gradient-to-br from-orange-100 to-red-100">
               <CardHeader>
-                <CardTitle>面試錄影</CardTitle>
+                <CardTitle className="text-red-700">面試錄影</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4">
@@ -122,9 +122,9 @@ export default function StudentDetail() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-100 to-cyan-100">
               <CardHeader>
-                <CardTitle>錄影表現摘要</CardTitle>
+                <CardTitle className="text-blue-700">錄影表現摘要</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-4">
@@ -147,25 +147,25 @@ export default function StudentDetail() {
 
           <TabsContent value="written" className="space-y-6">
             {studentData.writtenAnswers.map((qa, index) => (
-              <Card key={index}>
+              <Card key={index} className="bg-gradient-to-br from-blue-100 to-cyan-100">
                 <CardHeader>
-                  <CardTitle className="text-lg">題目 {index + 1}</CardTitle>
+                  <CardTitle className="text-blue-700 text-lg">題目 {index + 1}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <p className="font-medium text-blue-900">{qa.question}</p>
                     </div>
-                    <div className="p-4 bg-gray-50 rounded-lg">
+                    <div className="p-4 bg-white/80 rounded-lg">
                       <p className="text-gray-800 leading-relaxed">{qa.answer}</p>
                     </div>
                     <div className="border-t pt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">教師註解</label>
+                      <label className="block text-sm font-medium text-pink-600 mb-2">教師註解</label>
                       <Textarea
                         placeholder="針對這個回答添加您的註解或建議..."
                         value={annotations[index] || ""}
                         onChange={(e) => handleAnnotation(index, e.target.value)}
-                        className="min-h-[100px]"
+                        className="min-h-[100px] border-pink-200 focus:border-pink-400 focus:ring-pink-200"
                       />
                     </div>
                   </div>
@@ -175,15 +175,15 @@ export default function StudentDetail() {
           </TabsContent>
 
           <TabsContent value="resume" className="space-y-6">
-            <Card>
+            <Card className="bg-gradient-to-br from-purple-100 to-purple-200">
               <CardHeader>
-                <CardTitle>學生履歷檔案</CardTitle>
+                <CardTitle className="text-purple-700">學生履歷檔案</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   <div>
-                    <h4 className="font-medium mb-3">自傳內容</h4>
-                    <div className="bg-gray-50 p-4 rounded-lg">
+                    <h4 className="font-medium mb-3 text-pink-600">自傳內容</h4>
+                    <div className="bg-white/80 p-4 rounded-lg">
                       <p className="text-sm leading-relaxed">
                         我是張小明，來自台北市立第一高中。從小我就對科學充滿興趣，特別是資訊科學領域。
                         在高中三年期間，我積極參與各種學習活動。我參加了程式設計社團，學習了Python和Java程式語言...
@@ -192,14 +192,14 @@ export default function StudentDetail() {
                   </div>
 
                   <div>
-                    <h4 className="font-medium mb-3">學習歷程檔案</h4>
+                    <h4 className="font-medium mb-3 text-blue-600">學習歷程檔案</h4>
                     <div className="grid md:grid-cols-2 gap-4">
-                      <div className="p-3 border rounded-lg">
+                      <div className="p-3 border rounded-lg bg-blue-50">
                         <h5 className="font-medium text-sm">程式設計專題</h5>
                         <p className="text-xs text-gray-600 mt-1">開發校園活動管理系統</p>
-                        <Badge className="mt-2 bg-blue-100 text-blue-800">已上傳</Badge>
+                        <Badge className="mt-2 bg-green-100 text-green-800">已上傳</Badge>
                       </div>
-                      <div className="p-3 border rounded-lg">
+                      <div className="p-3 border rounded-lg bg-green-50">
                         <h5 className="font-medium text-sm">科學展覽作品</h5>
                         <p className="text-xs text-gray-600 mt-1">AI在教育上的應用研究</p>
                         <Badge className="mt-2 bg-blue-100 text-blue-800">已上傳</Badge>
@@ -208,7 +208,7 @@ export default function StudentDetail() {
                   </div>
 
                   <div>
-                    <h4 className="font-medium mb-3">AI 履歷分析摘要</h4>
+                    <h4 className="font-medium mb-3 text-purple-600">AI 履歷分析摘要</h4>
                     <div className="grid md:grid-cols-4 gap-4">
                       <div className="text-center p-3 bg-blue-50 rounded-lg">
                         <div className="text-lg font-bold text-blue-600">82</div>
@@ -230,8 +230,8 @@ export default function StudentDetail() {
                   </div>
 
                   <div className="border-t pt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">履歷評語</label>
-                    <Textarea placeholder="針對學生的履歷內容添加您的評語和建議..." className="min-h-[100px]" />
+                    <label className="block text-sm font-medium text-pink-600 mb-2">履歷評語</label>
+                    <Textarea placeholder="針對學生的履歷內容添加您的評語和建議..." className="min-h-[100px] border-pink-200 focus:border-pink-400 focus:ring-pink-200" />
                   </div>
                 </div>
               </CardContent>
@@ -240,17 +240,17 @@ export default function StudentDetail() {
 
           <TabsContent value="analysis" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
-              <Card>
+              <Card className="bg-gradient-to-br from-green-100 to-green-200">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-2 text-green-700">
+                    <BarChart3 className="w-5 h-5 text-pink-400" />
                     AI 評分分析
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center mb-6">
-                    <div className="text-4xl font-bold text-blue-600">{studentData.aiAnalysis.overallScore}</div>
-                    <div className="text-gray-600">總體評分</div>
+                    <div className="text-4xl font-bold text-pink-600">{studentData.aiAnalysis.overallScore}</div>
+                    <div className="text-blue-500">總體評分</div>
                   </div>
                   <div className="space-y-4">
                     {studentData.aiAnalysis.categories.map((category, index) => (
@@ -259,16 +259,16 @@ export default function StudentDetail() {
                           <span className="text-sm font-medium">{category.name}</span>
                           <span className="text-sm text-gray-500">{category.score}%</span>
                         </div>
-                        <Progress value={category.score} className="h-2" />
+                        <Progress value={category.score} className="h-2 bg-gradient-to-r from-pink-200 via-blue-200 to-green-200" />
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-orange-100 to-yellow-100">
                 <CardHeader>
-                  <CardTitle>AI 系統建議</CardTitle>
+                  <CardTitle className="text-orange-600">AI 系統建議</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
@@ -301,10 +301,10 @@ export default function StudentDetail() {
           </TabsContent>
 
           <TabsContent value="feedback" className="space-y-6">
-            <Card>
+            <Card className="bg-gradient-to-br from-pink-100 to-purple-100">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-pink-600">
+                  <MessageSquare className="w-5 h-5 text-pink-400" />
                   整體評語
                 </CardTitle>
               </CardHeader>
@@ -313,10 +313,10 @@ export default function StudentDetail() {
                   placeholder="請輸入您對這位學生的整體評語和建議..."
                   value={teacherComment}
                   onChange={(e) => setTeacherComment(e.target.value)}
-                  className="min-h-[200px] text-base leading-relaxed"
+                  className="min-h-[200px] text-base leading-relaxed border-pink-200 focus:border-pink-400 focus:ring-pink-200"
                 />
                 <div className="flex justify-end mt-4">
-                  <Button onClick={handleSaveComment} className="bg-blue-600 hover:bg-blue-700">
+                  <Button onClick={handleSaveComment} className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white">
                     <Save className="w-4 h-4 mr-2" />
                     儲存評語
                   </Button>
@@ -324,9 +324,9 @@ export default function StudentDetail() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-100 to-cyan-100">
               <CardHeader>
-                <CardTitle>評分建議</CardTitle>
+                <CardTitle className="text-blue-700">評分建議</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-6">
@@ -354,7 +354,7 @@ export default function StudentDetail() {
                   <div>
                     <h4 className="font-medium mb-3">AI 建議評分</h4>
                     <div className="text-center p-6 bg-blue-50 rounded-lg">
-                      <div className="text-3xl font-bold text-blue-600">{studentData.aiAnalysis.overallScore}</div>
+                      <div className="text-3xl font-bold text-pink-600">{studentData.aiAnalysis.overallScore}</div>
                       <div className="text-blue-800 mt-2">基於綜合表現分析</div>
                     </div>
                   </div>

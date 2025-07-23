@@ -24,6 +24,8 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (data.success) {
+        // 存儲用戶名
+        window.localStorage.setItem("username", username)
         if (data.role === "student") {
           router.push("/student/dashboard")
         } else if (data.role === "teacher") {
@@ -42,16 +44,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center mb-6">登錄</h1>
-        <form onSubmit={handleLogin} className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-blue-100 to-green-100 p-4">
+      <div className="w-full max-w-md bg-white/90 rounded-2xl shadow-2xl p-10 border-0">
+        <h1 className="text-4xl font-extrabold text-pink-600 text-center mb-8 tracking-tight drop-shadow">登錄</h1>
+        <form onSubmit={handleLogin} className="space-y-6">
           <Input
             type="text"
             placeholder="用戶名"
             value={username}
             onChange={e => setUsername(e.target.value)}
             required
+            className="rounded-xl border-pink-200 focus:border-pink-400 focus:ring-pink-200 text-lg"
           />
           <Input
             type="password"
@@ -59,13 +62,14 @@ export default function LoginPage() {
             value={password}
             onChange={e => setPassword(e.target.value)}
             required
+            className="rounded-xl border-blue-200 focus:border-blue-400 focus:ring-blue-200 text-lg"
           />
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
-          <Button type="submit" className="w-full" disabled={loading}>{loading ? "登錄中..." : "登錄"}</Button>
+          <Button type="submit" className="w-full bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white text-lg rounded-xl shadow" disabled={loading}>{loading ? "登錄中..." : "登錄"}</Button>
         </form>
-        <div className="text-center mt-4">
-          還沒有帳號？
-          <Button variant="link" onClick={() => router.push("/register")}>註冊</Button>
+        <div className="text-center mt-6">
+          <span className="text-gray-600">還沒有帳號？</span>
+          <Button variant="link" className="text-pink-600 hover:text-blue-600" onClick={() => router.push("/register")}>註冊</Button>
         </div>
       </div>
     </div>

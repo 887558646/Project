@@ -100,27 +100,27 @@ export default function ResumeAdvisor() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Button variant="ghost" onClick={() => router.push("/student/dashboard")} className="mr-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+            <Button variant="ghost" onClick={() => router.push("/student/dashboard")} className="mr-4 text-pink-600 hover:bg-pink-100">
+              <ArrowLeft className="w-4 h-4 mr-2 text-pink-400" />
               返回
             </Button>
-            <h1 className="text-xl font-semibold text-gray-900">履歷撰寫建議</h1>
+            <h1 className="text-xl font-semibold text-pink-600">履歷撰寫建議</h1>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">AI 履歷優化助手</h2>
-          <p className="text-gray-600">上傳您的自傳或學習歷程檔案，獲得專業的撰寫建議</p>
+          <h2 className="text-3xl font-bold text-pink-600 mb-2">AI 履歷優化助手</h2>
+          <p className="text-blue-500">上傳你的自傳或學習歷程檔案，獲得專業的撰寫建議</p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-pink-100 via-blue-100 to-green-100">
             <TabsTrigger value="upload">上傳文件</TabsTrigger>
             <TabsTrigger value="analysis" disabled={!hasAnalysis}>
               分析結果
@@ -132,10 +132,10 @@ export default function ResumeAdvisor() {
 
           <TabsContent value="upload" className="space-y-6">
             <div className="grid lg:grid-cols-2 gap-6">
-              <Card>
+              <Card className="bg-gradient-to-br from-purple-100 to-purple-200">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-2 text-purple-700">
+                    <Upload className="w-5 h-5 text-pink-400" />
                     上傳或貼上內容
                   </CardTitle>
                 </CardHeader>
@@ -161,13 +161,11 @@ export default function ResumeAdvisor() {
                   />
 
                   <div className="flex gap-2">
-                    <Button onClick={loadSample} variant="outline" size="sm">
-                      載入範例
-                    </Button>
+                    <Button onClick={loadSample} variant="outline" size="sm" className="border-pink-200 text-pink-600">載入範例</Button>
                     <Button
                       onClick={handleAnalyze}
                       disabled={!resumeText.trim() || isAnalyzing}
-                      className="bg-purple-600 hover:bg-purple-700"
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white"
                     >
                       {isAnalyzing ? "分析中..." : "開始分析"}
                     </Button>
@@ -175,9 +173,9 @@ export default function ResumeAdvisor() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-blue-100 to-cyan-100">
                 <CardHeader>
-                  <CardTitle>分析項目說明</CardTitle>
+                  <CardTitle className="text-blue-700">分析項目說明</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -205,9 +203,9 @@ export default function ResumeAdvisor() {
 
           <TabsContent value="analysis" className="space-y-6">
             <div className="grid lg:grid-cols-2 gap-6">
-              <Card>
+              <Card className="bg-gradient-to-br from-green-100 to-green-200">
                 <CardHeader>
-                  <CardTitle>整體評分</CardTitle>
+                  <CardTitle className="text-green-700">整體評分</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center mb-6">
@@ -229,9 +227,9 @@ export default function ResumeAdvisor() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="bg-gradient-to-br from-orange-100 to-yellow-100">
                 <CardHeader>
-                  <CardTitle>問題標記</CardTitle>
+                  <CardTitle className="text-orange-700">問題標記</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -278,10 +276,10 @@ export default function ResumeAdvisor() {
           </TabsContent>
 
           <TabsContent value="suggestions" className="space-y-6">
-            <Card>
+            <Card className="bg-gradient-to-br from-pink-100 to-purple-100">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-pink-600">
+                  <Lightbulb className="w-5 h-5 text-pink-400" />
                   AI 重寫建議
                 </CardTitle>
               </CardHeader>
@@ -323,9 +321,9 @@ export default function ResumeAdvisor() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-gradient-to-br from-blue-100 to-cyan-100">
               <CardHeader>
-                <CardTitle>段落結構建議</CardTitle>
+                <CardTitle className="text-blue-700">段落結構建議</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
