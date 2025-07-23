@@ -8,6 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, Upload, AlertTriangle, Lightbulb, Copy } from "lucide-react"
 import { useRouter } from "next/navigation"
+import mammoth from "mammoth"
+// @ts-ignore
+import * as pdfjsLib from "pdfjs-dist/build/pdf"
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 const sampleResume = `我是張小明，來自台北市立第一高中。從小我就對科學充滿興趣，特別是資訊科學領域。
 
@@ -68,15 +72,77 @@ export default function ResumeAdvisor() {
   const [resumeText, setResumeText] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [hasAnalysis, setHasAnalysis] = useState(false)
+  const [aiSuggestion, setAiSuggestion] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState("")
+  const [aiResult, setAiResult] = useState<any>(null)
 
-  const handleAnalyze = () => {
+  // 四個AI分析結果
+  const [scoreResult, setScoreResult] = useState<any>(null)
+  const [scoreLoading, setScoreLoading] = useState(false)
+  const [scoreError, setScoreError] = useState("")
+
+  const [issuesResult, setIssuesResult] = useState<any>(null)
+  const [issuesLoading, setIssuesLoading] = useState(false)
+  const [issuesError, setIssuesError] = useState("")
+
+  const [rewriteResult, setRewriteResult] = useState<string>("")
+  const [rewriteLoading, setRewriteLoading] = useState(false)
+  const [rewriteError, setRewriteError] = useState("")
+
+  const [structureResult, setStructureResult] = useState<any>(null)
+  const [structureLoading, setStructureLoading] = useState(false)
+  const [structureError, setStructureError] = useState("")
+
+  const handleAnalyze = async () => {
     setIsAnalyzing(true)
-    // Simulate analysis
-    setTimeout(() => {
+    setHasAnalysis(false)
+    setScoreResult(null); setScoreLoading(true); setScoreError("")
+    setIssuesResult(null); setIssuesLoading(true); setIssuesError("")
+    setRewriteResult(""); setRewriteLoading(true); setRewriteError("")
+    setStructureResult(null); setStructureLoading(true); setStructureError("")
+    setActiveTab("analysis")
+    try {
+      // 分數/面向
+      const scorePromise = fetch("/api/resume-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume: resumeText })
+      }).then(res => res.json())
+      // 原文標註
+      const issuesPromise = fetch("/api/resume-issues", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume: resumeText })
+      }).then(res => res.json())
+      // AI重寫建議
+      const rewritePromise = fetch("/api/resume-rewrite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume: resumeText })
+      }).then(res => res.json())
+      // 段落結構建議
+      const structurePromise = fetch("/api/resume-structure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume: resumeText })
+      }).then(res => res.json())
+      // 並行請求
+      const [score, issues, rewrite, structure] = await Promise.all([scorePromise, issuesPromise, rewritePromise, structurePromise])
+      if (score.success) setScoreResult(score.result); else setScoreError(score.message || "AI分析失敗")
+      if (issues.success) setIssuesResult(issues.result); else setIssuesError(issues.message || "AI標註失敗")
+      if (rewrite.success) setRewriteResult(rewrite.result); else setRewriteError(rewrite.message || "AI重寫失敗")
+      if (structure.success) setStructureResult(structure.result); else setStructureError(structure.message || "AI結構建議失敗")
+    } catch {
+      setScoreError("AI分析失敗"); setIssuesError("AI標註失敗"); setRewriteError("AI重寫失敗"); setStructureError("AI結構建議失敗")
+    } finally {
       setIsAnalyzing(false)
+      setScoreLoading(false)
+      setIssuesLoading(false)
+      setRewriteLoading(false)
+      setStructureLoading(false)
       setHasAnalysis(true)
-      setActiveTab("analysis")
-    }, 3000)
+    }
   }
 
   const loadSample = () => {
@@ -86,6 +152,57 @@ export default function ResumeAdvisor() {
   const applySuggestion = (improved: string) => {
     // In a real app, this would replace the text in the original content
     alert(`建議已套用：${improved}`)
+  }
+
+  // 新增下載報告功能
+  const handleDownloadReport = () => {
+    const content = `【原始履歷內容】\n${resumeText}\n\n【AI優化建議】\n${aiSuggestion}`
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "resume-advisor-report.txt"
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // 處理txt/pdf/docx檔案上傳
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (file.type === "text/plain") {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setResumeText(event.target?.result as string)
+      }
+      reader.readAsText(file, "utf-8")
+    } else if (file.type === "application/pdf") {
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        const typedarray = new Uint8Array(event.target?.result as ArrayBuffer)
+        const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise
+        let text = ""
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const content = await page.getTextContent()
+          text += content.items.map((item: any) => item.str).join(" ") + "\n"
+        }
+        setResumeText(text)
+      }
+      reader.readAsArrayBuffer(file)
+    } else if (file.name.endsWith(".docx")) {
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        const arrayBuffer = event.target?.result as ArrayBuffer
+        const result = await mammoth.extractRawText({ arrayBuffer })
+        setResumeText(result.value)
+      }
+      reader.readAsArrayBuffer(file)
+    } else {
+      alert("僅支援 .txt, .pdf, .docx 檔案上傳")
+    }
   }
 
   const getSeverityColor = (severity: string) => {
@@ -143,10 +260,13 @@ export default function ResumeAdvisor() {
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-sm text-gray-600 mb-2">拖拽檔案到此處或點擊上傳</p>
-                    <Button variant="outline" size="sm">
-                      選擇檔案
+                    <Button asChild variant="outline" size="sm">
+                      <label>
+                        選擇檔案
+                        <input type="file" accept=".txt,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleFileChange} />
+                      </label>
                     </Button>
-                    <p className="text-xs text-gray-500 mt-2">支援 .txt, .docx, .pdf 格式</p>
+                    <p className="text-xs text-gray-500 mt-2">支援 .txt, .pdf, .docx 格式</p>
                   </div>
 
                   <div className="text-center">
@@ -208,33 +328,70 @@ export default function ResumeAdvisor() {
                   <CardTitle className="text-green-700">整體評分</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center mb-6">
-                    <div className="text-4xl font-bold text-purple-600">{analysisResults.overallScore}</div>
-                    <div className="text-gray-600">/ 100</div>
-                  </div>
-                  <div className="space-y-4">
-                    {analysisResults.categories.map((category, index) => (
-                      <div key={index}>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium">{category.name}</span>
-                          <span className="text-sm text-gray-500">{category.score}%</span>
-                        </div>
-                        <Progress value={category.score} className="h-2 mb-1" />
-                        <p className="text-xs text-gray-600">{category.feedback}</p>
+                  {scoreLoading && <div className="text-blue-500">AI分析中...</div>}
+                  {scoreError && <div className="text-red-500">{scoreError}</div>}
+                  {scoreResult && (
+                    <>
+                      <div className="text-center mb-6">
+                        <div className="text-4xl font-bold text-purple-600">{scoreResult.overallScore}</div>
+                        <div className="text-gray-600">/ 100</div>
                       </div>
-                    ))}
-                  </div>
+                      <div className="space-y-4">
+                        {scoreResult.categories?.map((category: any, index: number) => (
+                          <div key={index}>
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium">{category.name}</span>
+                              <span className="text-sm text-gray-500">{category.score}%</span>
+                            </div>
+                            <Progress value={category.score} className="h-2 mb-1" />
+                            <p className="text-xs text-gray-600">{category.feedback}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
               <Card className="bg-gradient-to-br from-orange-100 to-yellow-100">
                 <CardHeader>
-                  <CardTitle className="text-orange-700">問題標記</CardTitle>
+                  <CardTitle className="text-orange-700">AI 智能優化建議</CardTitle>
                 </CardHeader>
                 <CardContent>
+                  {scoreLoading && <div className="text-blue-500">AI建議生成中...</div>}
+                  {scoreError && <div className="text-red-500">{scoreError}</div>}
+                  {scoreResult && scoreResult.categories && (
+                    <>
+                      <div className="whitespace-pre-line text-gray-800 text-base leading-relaxed mb-4">
+                        {scoreResult.categories.map((cat: any, idx: number) => (
+                          <div key={idx}>
+                            <strong>{cat.name}：</strong> {cat.feedback}
+                          </div>
+                        ))}
+                      </div>
+                      <Button onClick={handleDownloadReport} className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white mt-2">
+                        下載建議報告
+                      </Button>
+                    </>
+                  )}
+                  {!scoreLoading && !scoreResult && !scoreError && (
+                    <div className="text-gray-400 text-sm">請先上傳/輸入履歷並點擊「開始分析」</div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>原文標註</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {issuesLoading && <div className="text-blue-500">AI標註中...</div>}
+                {issuesError && <div className="text-red-500">{issuesError}</div>}
+                {issuesResult && issuesResult.length > 0 ? (
                   <div className="space-y-3">
-                    {analysisResults.issues.map((issue, index) => (
-                      <div key={index} className={`p-3 rounded-lg border ${getSeverityColor(issue.severity)}`}>
+                    {issuesResult.map((issue: any, idx: number) => (
+                      <div key={idx} className={`p-3 rounded-lg border ${getSeverityColor(issue.severity)}`}>
                         <div className="flex items-start gap-2 mb-2">
                           <AlertTriangle className="w-4 h-4 mt-0.5" />
                           <div className="flex-1">
@@ -245,32 +402,9 @@ export default function ResumeAdvisor() {
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>原文標註</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm leading-relaxed">
-                    {sampleResume.split("。").map((sentence, index) => {
-                      const hasIssue = analysisResults.issues.some((issue) => sentence.includes(issue.text))
-                      return (
-                        <span
-                          key={index}
-                          className={hasIssue ? "bg-yellow-200 px-1 rounded" : ""}
-                          title={hasIssue ? "點擊查看建議" : ""}
-                        >
-                          {sentence}
-                          {index < sampleResume.split("。").length - 1 && "。"}
-                        </span>
-                      )
-                    })}
-                  </div>
-                </div>
+                ) : (
+                  <div className="text-gray-400 text-sm">AI未檢測到明顯問題句</div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -284,40 +418,15 @@ export default function ResumeAdvisor() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {analysisResults.suggestions.map((suggestion, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">原文</h4>
-                          <div className="bg-red-50 p-3 rounded border-l-4 border-red-400">
-                            <p className="text-sm text-red-800">{suggestion.original}</p>
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-700 mb-2">建議改寫</h4>
-                          <div className="bg-green-50 p-3 rounded border-l-4 border-green-400">
-                            <p className="text-sm text-green-800">{suggestion.improved}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-gray-600">
-                            <strong>改善理由：</strong>
-                            {suggestion.reason}
-                          </p>
-                          <Button
-                            onClick={() => applySuggestion(suggestion.improved)}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Copy className="w-3 h-3 mr-1" />
-                            套用建議
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {rewriteLoading && <div className="text-blue-500">AI重寫中...</div>}
+                {rewriteError && <div className="text-red-500">{rewriteError}</div>}
+                {rewriteResult ? (
+                  <div className="whitespace-pre-line text-gray-800 text-base leading-relaxed">
+                    {rewriteResult}
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-sm">AI尚未生成重寫建議</div>
+                )}
               </CardContent>
             </Card>
 
@@ -326,27 +435,37 @@ export default function ResumeAdvisor() {
                 <CardTitle className="text-blue-700">段落結構建議</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">建議結構</h4>
-                    <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                      <li>開頭：具體的啟發經驗或轉捩點</li>
-                      <li>學習歷程：具體的活動、職位、成果</li>
-                      <li>能力展現：透過實例證明相關能力</li>
-                      <li>未來規劃：明確的學習目標和職涯方向</li>
-                      <li>結尾：總結個人特質與科系的契合度</li>
-                    </ol>
+                {structureLoading && <div className="text-blue-500">AI結構建議生成中...</div>}
+                {structureError && <div className="text-red-500">{structureError}</div>}
+                {structureResult && Array.isArray(structureResult) ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-blue-50 rounded-lg">
+                      <h4 className="font-medium text-blue-900 mb-2">建議結構</h4>
+                      <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                        {structureResult.map((item: any, idx: number) => (
+                          typeof item === 'string' ? (
+                            <li key={idx}>{item}</li>
+                          ) : (
+                            <li key={idx}>
+                              <strong>{item.section || '段落'}：</strong>
+                              {Array.isArray(item.key_points) ? (
+                                <ul className="ml-4 list-disc">
+                                  {item.key_points.map((pt: any, i: number) => (
+                                    <li key={i}>{pt}</li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <span>{item.key_points}</span>
+                              )}
+                            </li>
+                          )
+                        ))}
+                      </ol>
+                    </div>
                   </div>
-                  <div className="p-4 bg-purple-50 rounded-lg">
-                    <h4 className="font-medium text-purple-900 mb-2">加分要素</h4>
-                    <ul className="text-sm text-purple-800 space-y-1 list-disc list-inside">
-                      <li>具體的數據和成果（如：競賽名次、專案規模）</li>
-                      <li>獨特的個人經驗或觀點</li>
-                      <li>展現成長和學習能力的例子</li>
-                      <li>與科系相關的具體技能或知識</li>
-                    </ul>
-                  </div>
-                </div>
+                ) : (
+                  <div className="text-gray-400 text-sm">AI尚未生成段落結構建議</div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
