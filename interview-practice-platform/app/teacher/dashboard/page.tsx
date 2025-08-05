@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { User, LogOut, Search, Video, FileText, Clock, CheckCircle } from "lucide-react"
+import { User, LogOut, Search, Video, FileText, Clock, CheckCircle, Database } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 const students = [
@@ -127,6 +127,27 @@ export default function TeacherDashboard() {
         <div className="mb-10">
           <h2 className="text-4xl font-extrabold text-pink-600 mb-2 tracking-tight">學生管理</h2>
           <p className="text-lg text-blue-500">檢視和管理學生的面試練習進度</p>
+        </div>
+
+        {/* 管理功能按鈕 */}
+        <div className="mb-8">
+          <Card className="bg-gradient-to-br from-purple-100 to-purple-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-purple-700 mb-2">管理功能</h3>
+                  <p className="text-sm text-purple-600">管理題庫和系統設置</p>
+                </div>
+                <Button
+                  onClick={() => router.push("/teacher/question-bank")}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white"
+                >
+                  <Database className="w-4 h-4 mr-2" />
+                  題庫管理
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Statistics Cards */}

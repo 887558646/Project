@@ -1,17 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Upload, AlertTriangle, Lightbulb, Copy } from "lucide-react"
+import { ArrowLeft, Upload, AlertTriangle, Lightbulb, Copy, Save, History, Download, RefreshCw, FileText } from "lucide-react"
 import { useRouter } from "next/navigation"
 import mammoth from "mammoth"
-// @ts-ignore
-import * as pdfjsLib from "pdfjs-dist/build/pdf"
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+
+// 動態導入PDF.js，避免SSR問題
+let pdfjsLib: any = null
 
 const sampleResume = `我是張小明，來自台北市立第一高中。從小我就對科學充滿興趣，特別是資訊科學領域。
 
@@ -23,59 +23,16 @@ const sampleResume = `我是張小明，來自台北市立第一高中。從小�
 
 我相信我具備了進入資訊工程系所需的能力和熱忱。我希望能夠在大學期間繼續深造，將來為科技發展貢獻一份心力。`
 
-const analysisResults = {
-  overallScore: 78,
-  categories: [
-    { name: "邏輯結構", score: 75, feedback: "段落安排合理，但可加強段落間的連接" },
-    { name: "動機明確度", score: 82, feedback: "對科系的興趣表達清楚，但可更具體說明選擇理由" },
-    { name: "個人化程度", score: 70, feedback: "有具體經驗，但需要更多獨特的個人特色" },
-    { name: "語言表達", score: 85, feedback: "用詞恰當，語句通順，表達清晰" },
-  ],
-  issues: [
-    {
-      type: "structure",
-      text: "從小我就對科學充滿興趣",
-      suggestion: "建議具體說明是什麼經驗或事件啟發了您對科學的興趣",
-      severity: "medium",
-    },
-    {
-      type: "vague",
-      text: "積極參與各種學習活動",
-      suggestion: "請具體列舉參與的活動名稱和您的角色",
-      severity: "high",
-    },
-    {
-      type: "generic",
-      text: "我相信我具備了進入資訊工程系所需的能力和熱忱",
-      suggestion: "建議具體說明您具備哪些能力，並提供證據支持",
-      severity: "high",
-    },
-  ],
-  suggestions: [
-    {
-      original: "從小我就對科學充滿興趣，特別是資訊科學領域。",
-      improved:
-        "國中時期接觸到第一個程式語言Scratch，看著自己設計的角色在螢幕上動起來的那一刻，我深深被程式設計的魅力所吸引。",
-      reason: "具體的起始經驗更有說服力",
-    },
-    {
-      original: "我積極參與各種學習活動。",
-      improved: "三年來我擔任程式設計社副社長，主辦過兩次校內程式競賽，並帶領團隊參加全國高中生程式設計競賽獲得佳作。",
-      reason: "具體的職位、活動和成果更有說服力",
-    },
-  ],
-}
-
 export default function ResumeAdvisor() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("upload")
   const [resumeText, setResumeText] = useState("")
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [hasAnalysis, setHasAnalysis] = useState(false)
-  const [aiSuggestion, setAiSuggestion] = useState("")
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError] = useState("")
-  const [aiResult, setAiResult] = useState<any>(null)
+  const [username, setUsername] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [history, setHistory] = useState<any[]>([])
+  const [showHistory, setShowHistory] = useState(false)
 
   // 四個AI分析結果
   const [scoreResult, setScoreResult] = useState<any>(null)
@@ -94,6 +51,39 @@ export default function ResumeAdvisor() {
   const [structureLoading, setStructureLoading] = useState(false)
   const [structureError, setStructureError] = useState("")
 
+  useEffect(() => {
+    // 獲取用戶名
+    const storedUsername = window.localStorage.getItem("username")
+    setUsername(storedUsername || "")
+    
+    // 獲取歷史記錄
+    if (storedUsername) {
+      fetchHistory(storedUsername)
+    }
+
+    // 動態載入PDF.js
+    const loadPDFJS = async () => {
+      if (typeof window !== 'undefined') {
+        const pdfjs = await import('pdfjs-dist/build/pdf')
+        pdfjsLib = pdfjs
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+      }
+    }
+    loadPDFJS()
+  }, [])
+
+  const fetchHistory = async (username: string) => {
+    try {
+      const response = await fetch(`/api/resume-analysis/history?username=${username}`)
+      const data = await response.json()
+      if (data.success) {
+        setHistory(data.data)
+      }
+    } catch (error) {
+      console.error("獲取歷史記錄失敗:", error)
+    }
+  }
+
   const handleAnalyze = async () => {
     setIsAnalyzing(true)
     setHasAnalysis(false)
@@ -102,6 +92,7 @@ export default function ResumeAdvisor() {
     setRewriteResult(""); setRewriteLoading(true); setRewriteError("")
     setStructureResult(null); setStructureLoading(true); setStructureError("")
     setActiveTab("analysis")
+    
     try {
       // 分數/面向
       const scorePromise = fetch("/api/resume-score", {
@@ -109,31 +100,36 @@ export default function ResumeAdvisor() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resume: resumeText })
       }).then(res => res.json())
+      
       // 原文標註
       const issuesPromise = fetch("/api/resume-issues", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resume: resumeText })
       }).then(res => res.json())
+      
       // AI重寫建議
       const rewritePromise = fetch("/api/resume-rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resume: resumeText })
       }).then(res => res.json())
+      
       // 段落結構建議
       const structurePromise = fetch("/api/resume-structure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resume: resumeText })
       }).then(res => res.json())
+      
       // 並行請求
       const [score, issues, rewrite, structure] = await Promise.all([scorePromise, issuesPromise, rewritePromise, structurePromise])
+      
       if (score.success) setScoreResult(score.result); else setScoreError(score.message || "AI分析失敗")
       if (issues.success) setIssuesResult(issues.result); else setIssuesError(issues.message || "AI標註失敗")
       if (rewrite.success) setRewriteResult(rewrite.result); else setRewriteError(rewrite.message || "AI重寫失敗")
       if (structure.success) setStructureResult(structure.result); else setStructureError(structure.message || "AI結構建議失敗")
-    } catch {
+    } catch (error) {
       setScoreError("AI分析失敗"); setIssuesError("AI標註失敗"); setRewriteError("AI重寫失敗"); setStructureError("AI結構建議失敗")
     } finally {
       setIsAnalyzing(false)
@@ -145,23 +141,63 @@ export default function ResumeAdvisor() {
     }
   }
 
+  const saveAnalysis = async () => {
+    if (!username || !hasAnalysis) return
+
+    setSaving(true)
+    try {
+      const response = await fetch("/api/resume-analysis/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          originalText: resumeText,
+          analysisResults: {
+            scoreResult,
+            issuesResult,
+            rewriteResult,
+            structureResult
+          }
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        alert("✅ 分析結果保存成功！")
+        // 刷新歷史記錄
+        fetchHistory(username)
+      } else {
+        alert("❌ 保存失敗：" + data.message)
+      }
+    } catch (error) {
+      console.error("保存失敗:", error)
+      alert("❌ 保存失敗，請稍後重試")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const loadSample = () => {
     setResumeText(sampleResume)
   }
 
-  const applySuggestion = (improved: string) => {
-    // In a real app, this would replace the text in the original content
-    alert(`建議已套用：${improved}`)
+  const loadFromHistory = (historyItem: any) => {
+    setResumeText(historyItem.originalText)
+    setScoreResult(historyItem.scoreResult)
+    setIssuesResult(historyItem.issuesResult)
+    setRewriteResult(historyItem.rewriteResult)
+    setStructureResult(historyItem.structureResult)
+    setHasAnalysis(true)
+    setActiveTab("analysis")
   }
 
-  // 新增下載報告功能
   const handleDownloadReport = () => {
-    const content = `【原始履歷內容】\n${resumeText}\n\n【AI優化建議】\n${aiSuggestion}`
+    const content = `【原始履歷內容】\n${resumeText}\n\n【AI分析結果】\n整體評分：${scoreResult?.overallScore || 0}/100\n\n【重寫建議】\n${rewriteResult}\n\n【問題標註】\n${issuesResult?.map((issue: any) => `- ${issue.text}: ${issue.suggestion}`).join('\n') || '無'}`
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "resume-advisor-report.txt"
+    a.download = `resume-analysis-${new Date().toISOString().split('T')[0]}.txt`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -181,23 +217,37 @@ export default function ResumeAdvisor() {
     } else if (file.type === "application/pdf") {
       const reader = new FileReader()
       reader.onload = async (event) => {
-        const typedarray = new Uint8Array(event.target?.result as ArrayBuffer)
-        const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise
-        let text = ""
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i)
-          const content = await page.getTextContent()
-          text += content.items.map((item: any) => item.str).join(" ") + "\n"
+        if (!pdfjsLib) {
+          alert("PDF處理器尚未載入，請稍後重試")
+          return
         }
-        setResumeText(text)
+        try {
+          const typedarray = new Uint8Array(event.target?.result as ArrayBuffer)
+          const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise
+          let text = ""
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i)
+            const content = await page.getTextContent()
+            text += content.items.map((item: any) => item.str).join(" ") + "\n"
+          }
+          setResumeText(text)
+        } catch (error) {
+          console.error("PDF解析失敗:", error)
+          alert("PDF檔案解析失敗，請檢查檔案格式")
+        }
       }
       reader.readAsArrayBuffer(file)
     } else if (file.name.endsWith(".docx")) {
       const reader = new FileReader()
       reader.onload = async (event) => {
-        const arrayBuffer = event.target?.result as ArrayBuffer
-        const result = await mammoth.extractRawText({ arrayBuffer })
-        setResumeText(result.value)
+        try {
+          const arrayBuffer = event.target?.result as ArrayBuffer
+          const result = await mammoth.extractRawText({ arrayBuffer })
+          setResumeText(result.value)
+        } catch (error) {
+          console.error("DOCX解析失敗:", error)
+          alert("DOCX檔案解析失敗，請檢查檔案格式")
+        }
       }
       reader.readAsArrayBuffer(file)
     } else {
@@ -213,6 +263,48 @@ export default function ResumeAdvisor() {
         return "text-orange-600 bg-orange-50 border-orange-200"
       default:
         return "text-yellow-600 bg-yellow-50 border-yellow-200"
+    }
+  }
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case "vague":
+        return "text-blue-600 bg-blue-50 border-blue-200"
+      case "empty":
+        return "text-gray-600 bg-gray-50 border-gray-200"
+      case "exaggerated":
+        return "text-purple-600 bg-purple-50 border-purple-200"
+      case "generic":
+        return "text-indigo-600 bg-indigo-50 border-indigo-200"
+      case "logic":
+        return "text-red-600 bg-red-50 border-red-200"
+      case "grammar":
+        return "text-orange-600 bg-orange-50 border-orange-200"
+      case "format":
+        return "text-green-600 bg-green-50 border-green-200"
+      default:
+        return "text-gray-600 bg-gray-50 border-gray-200"
+    }
+  }
+
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case "vague":
+        return "模糊不清"
+      case "empty":
+        return "空泛內容"
+      case "exaggerated":
+        return "誇大描述"
+      case "generic":
+        return "通用表達"
+      case "logic":
+        return "邏輯問題"
+      case "grammar":
+        return "語法錯誤"
+      case "format":
+        return "格式問題"
+      default:
+        return category
     }
   }
 
@@ -237,7 +329,7 @@ export default function ResumeAdvisor() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-gradient-to-r from-pink-100 via-blue-100 to-green-100">
+          <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-pink-100 via-blue-100 to-green-100">
             <TabsTrigger value="upload">上傳文件</TabsTrigger>
             <TabsTrigger value="analysis" disabled={!hasAnalysis}>
               分析結果
@@ -245,6 +337,7 @@ export default function ResumeAdvisor() {
             <TabsTrigger value="suggestions" disabled={!hasAnalysis}>
               改善建議
             </TabsTrigger>
+            <TabsTrigger value="history">歷史記錄</TabsTrigger>
           </TabsList>
 
           <TabsContent value="upload" className="space-y-6">
@@ -287,7 +380,14 @@ export default function ResumeAdvisor() {
                       disabled={!resumeText.trim() || isAnalyzing}
                       className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white"
                     >
-                      {isAnalyzing ? "分析中..." : "開始分析"}
+                      {isAnalyzing ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                          分析中...
+                        </>
+                      ) : (
+                        "開始分析"
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -322,6 +422,38 @@ export default function ResumeAdvisor() {
           </TabsContent>
 
           <TabsContent value="analysis" className="space-y-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">分析結果</h3>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={saveAnalysis}
+                  disabled={saving || !hasAnalysis}
+                  variant="outline"
+                  className="border-green-200 text-green-600"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {saving ? "保存中..." : "保存結果"}
+                </Button>
+                <Button 
+                  onClick={handleDownloadReport}
+                  disabled={!hasAnalysis}
+                  variant="outline"
+                  className="border-blue-200 text-blue-600"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  下載報告
+                </Button>
+                <Button 
+                  onClick={() => router.push("/student/written-qa")}
+                  disabled={!hasAnalysis}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white"
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  進入書面問答
+                </Button>
+              </div>
+            </div>
+
             <div className="grid lg:grid-cols-2 gap-6">
               <Card className="bg-gradient-to-br from-green-100 to-green-200">
                 <CardHeader>
@@ -338,13 +470,58 @@ export default function ResumeAdvisor() {
                       </div>
                       <div className="space-y-4">
                         {scoreResult.categories?.map((category: any, index: number) => (
-                          <div key={index}>
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm font-medium">{category.name}</span>
-                              <span className="text-sm text-gray-500">{category.score}%</span>
+                          <div key={index} className="bg-white p-4 rounded-lg border">
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-sm font-medium text-gray-900">{category.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-gray-500">{category.score}%</span>
+                                <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full ${
+                                      category.score >= 80 ? 'bg-green-500' :
+                                      category.score >= 70 ? 'bg-blue-500' :
+                                      category.score >= 60 ? 'bg-yellow-500' :
+                                      'bg-red-500'
+                                    }`}
+                                    style={{ width: `${category.score}%` }}
+                                  ></div>
+                                </div>
+                              </div>
                             </div>
-                            <Progress value={category.score} className="h-2 mb-1" />
-                            <p className="text-xs text-gray-600">{category.feedback}</p>
+                            <p className="text-xs text-gray-600 mb-3">{category.feedback}</p>
+                            
+                            {category.strengths && Array.isArray(category.strengths) && category.strengths.length > 0 && (
+                              <div className="mb-3">
+                                <p className="text-xs font-medium text-green-700 mb-1">優點：</p>
+                                <ul className="text-xs text-green-600 space-y-1 ml-4">
+                                  {category.strengths.map((strength: string, i: number) => (
+                                    <li key={i} className="list-disc">{strength}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {category.weaknesses && Array.isArray(category.weaknesses) && category.weaknesses.length > 0 && (
+                              <div className="mb-3">
+                                <p className="text-xs font-medium text-red-700 mb-1">缺點：</p>
+                                <ul className="text-xs text-red-600 space-y-1 ml-4">
+                                  {category.weaknesses.map((weakness: string, i: number) => (
+                                    <li key={i} className="list-disc">{weakness}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {category.suggestions && Array.isArray(category.suggestions) && category.suggestions.length > 0 && (
+                              <div>
+                                <p className="text-xs font-medium text-blue-700 mb-1">改進建議：</p>
+                                <ul className="text-xs text-blue-600 space-y-1 ml-4">
+                                  {category.suggestions.map((suggestion: string, i: number) => (
+                                    <li key={i} className="list-disc">{suggestion}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -369,9 +546,6 @@ export default function ResumeAdvisor() {
                           </div>
                         ))}
                       </div>
-                      <Button onClick={handleDownloadReport} className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white mt-2">
-                        下載建議報告
-                      </Button>
                     </>
                   )}
                   {!scoreLoading && !scoreResult && !scoreError && (
@@ -389,16 +563,40 @@ export default function ResumeAdvisor() {
                 {issuesLoading && <div className="text-blue-500">AI標註中...</div>}
                 {issuesError && <div className="text-red-500">{issuesError}</div>}
                 {issuesResult && issuesResult.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {issuesResult.map((issue: any, idx: number) => (
-                      <div key={idx} className={`p-3 rounded-lg border ${getSeverityColor(issue.severity)}`}>
-                        <div className="flex items-start gap-2 mb-2">
-                          <AlertTriangle className="w-4 h-4 mt-0.5" />
+                      <div key={idx} className={`p-4 rounded-lg border ${getSeverityColor(issue.severity)}`}>
+                        <div className="flex items-start gap-3 mb-3">
+                          <AlertTriangle className="w-5 h-5 mt-0.5" />
                           <div className="flex-1">
-                            <p className="text-sm font-medium">"{issue.text}"</p>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-sm font-medium">"{issue.text}"</span>
+                              <span className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(issue.category)}`}>
+                                {getCategoryLabel(issue.category)}
+                              </span>
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                issue.severity === 'high' ? 'bg-red-100 text-red-700' :
+                                issue.severity === 'medium' ? 'bg-orange-100 text-orange-700' :
+                                'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {issue.severity === 'high' ? '嚴重' : issue.severity === 'medium' ? '中等' : '輕微'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-2">{issue.suggestion}</p>
+                            {issue.reason && (
+                              <p className="text-xs text-gray-600 mb-2">
+                                <strong>問題原因：</strong>{issue.reason}
+                              </p>
+                            )}
+                            {issue.improved_example && (
+                              <div className="bg-green-50 p-2 rounded border-l-4 border-green-400">
+                                <p className="text-xs text-green-700">
+                                  <strong>改進範例：</strong>{issue.improved_example}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <p className="text-xs ml-6">{issue.suggestion}</p>
                       </div>
                     ))}
                   </div>
@@ -439,32 +637,96 @@ export default function ResumeAdvisor() {
                 {structureError && <div className="text-red-500">{structureError}</div>}
                 {structureResult && Array.isArray(structureResult) ? (
                   <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-medium text-blue-900 mb-2">建議結構</h4>
-                      <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-                        {structureResult.map((item: any, idx: number) => (
-                          typeof item === 'string' ? (
-                            <li key={idx}>{item}</li>
-                          ) : (
-                            <li key={idx}>
-                              <strong>{item.section || '段落'}：</strong>
-                              {Array.isArray(item.key_points) ? (
-                                <ul className="ml-4 list-disc">
-                                  {item.key_points.map((pt: any, i: number) => (
-                                    <li key={i}>{pt}</li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <span>{item.key_points}</span>
-                              )}
-                            </li>
-                          )
-                        ))}
-                      </ol>
-                    </div>
+                    {structureResult.map((item: any, idx: number) => (
+                      <div key={idx} className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                        <h4 className="font-medium text-blue-900 mb-2">{item.section}</h4>
+                        {item.purpose && (
+                          <p className="text-sm text-blue-800 mb-2">
+                            <strong>目的：</strong>{item.purpose}
+                          </p>
+                        )}
+                        {item.key_points && Array.isArray(item.key_points) && (
+                          <div className="mb-3">
+                            <p className="text-sm font-medium text-blue-800 mb-1">重點內容：</p>
+                            <ul className="text-sm text-blue-700 space-y-1 ml-4">
+                              {item.key_points.map((point: string, i: number) => (
+                                <li key={i} className="list-disc">{point}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {item.writing_tips && (
+                          <div className="mb-3">
+                            <p className="text-sm font-medium text-blue-800 mb-1">撰寫技巧：</p>
+                            <p className="text-sm text-blue-700">{item.writing_tips}</p>
+                          </div>
+                        )}
+                        {item.common_mistakes && (
+                          <div className="mb-3">
+                            <p className="text-sm font-medium text-red-800 mb-1">常見錯誤：</p>
+                            <p className="text-sm text-red-700">{item.common_mistakes}</p>
+                          </div>
+                        )}
+                        {item.word_count && (
+                          <div className="text-xs text-blue-600">
+                            <strong>建議字數：</strong>{item.word_count}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="text-gray-400 text-sm">AI尚未生成段落結構建議</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="w-5 h-5" />
+                  分析歷史記錄
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {history.length > 0 ? (
+                  <div className="space-y-4">
+                    {history.map((item, index) => (
+                      <div key={item.id} className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => loadFromHistory(item)}>
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <h4 className="font-medium text-gray-900">分析記錄 #{index + 1}</h4>
+                            <p className="text-sm text-gray-500">
+                              {new Date(item.createdAt).toLocaleString('zh-TW')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-purple-600">{item.overallScore}</div>
+                            <div className="text-xs text-gray-500">/ 100</div>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {item.originalText.substring(0, 100)}...
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <Button size="sm" variant="outline" onClick={(e) => {
+                            e.stopPropagation()
+                            loadFromHistory(item)
+                          }}>
+                            載入分析
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <History className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>暫無分析記錄</p>
+                    <p className="text-sm">開始分析履歷後，結果會自動保存到這裡</p>
+                  </div>
                 )}
               </CardContent>
             </Card>

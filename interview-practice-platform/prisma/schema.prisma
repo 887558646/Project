@@ -20,4 +20,62 @@ model User {
   password  String
   role      String
   createdAt DateTime @default(now())
+
+  // 關聯到書面問答記錄
+  writtenAnswers WrittenAnswer[]
+  // 關聯到履歷分析記錄
+  resumeAnalyses ResumeAnalysis[]
+}
+
+model WrittenAnswer {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  questionId Int
+  answer    String   @db.Text
+  wordCount Int
+  clarityScore Int
+  exaggerationScore Int
+  issues    String   @db.Text // JSON格式存儲問題列表
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, questionId])
+}
+
+model Question {
+  id       Int      @id @default(autoincrement())
+  question String   @db.Text
+  hint     String   @db.Text
+  category String   // 例如: "personal", "academic", "career"
+  isActive Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model ResumeAnalysis {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  originalText  String   @db.Text
+  scoreResult   String   @db.Text // JSON格式存儲評分結果
+  issuesResult  String   @db.Text // JSON格式存儲問題標註
+  rewriteResult String   @db.Text // AI重寫建議
+  structureResult String  @db.Text // JSON格式存儲結構建議
+  overallScore  Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id])
+  // 關聯到個性化問題
+  personalizedQuestions PersonalizedQuestion[]
+}
+
+model PersonalizedQuestion {
+  id            Int      @id @default(autoincrement())
+  resumeAnalysisId Int
+  question      String   @db.Text
+  hint          String   @db.Text
+  category      String   // personal, academic, technical, career
+  reason        String   @db.Text
+  createdAt     DateTime @default(now())
+
+  resumeAnalysis ResumeAnalysis @relation(fields: [resumeAnalysisId], references: [id])
 }
