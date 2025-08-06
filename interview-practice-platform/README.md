@@ -36,13 +36,15 @@ pnpm install
 
 ### 3. 环境变量配置
 
+**重要**：请确保不要在代码中硬编码任何API密钥或敏感信息。
+
 创建 `.env` 文件并配置以下环境变量：
 
 ```env
 # 数据库连接
 DATABASE_URL="mysql://username:password@localhost:3306/interview_platform"
 
-# OpenAI API密钥
+# OpenAI API密钥（请从 https://platform.openai.com/api-keys 获取）
 OPENAI_API_KEY="your-openai-api-key-here"
 ```
 
@@ -62,10 +64,19 @@ pnpm exec prisma migrate status
 ### 5. 启动开发服务器
 
 ```bash
+# 方法1：使用环境变量启动脚本（推荐）
+pnpm run dev:env
+
+# 方法2：手动设置环境变量
+$env:DATABASE_URL="mysql://root:@localhost:3306/interview_platform"; pnpm dev
+
+# 方法3：直接启动（可能會有環境變量問題）
 pnpm dev
 ```
 
 访问 http://localhost:3000
+
+**注意**：如果遇到 `DATABASE_URL` 环境变量未找到的错误，请使用方法1或方法2启动服务器。
 
 ## 项目结构
 
@@ -108,7 +119,15 @@ interview-practice-platform/
 - **ResumeAnalysis**: 履历分析记录
 - **PersonalizedQuestion**: 个性化问题
 
-## 部署注意事项
+## 安全性注意事项
+
+### API密钥安全
+1. **永远不要在代码中硬编码API密钥**
+2. **使用环境变量**：所有敏感信息都应通过环境变量配置
+3. **保护.env文件**：确保.env文件已添加到.gitignore中
+4. **定期轮换密钥**：定期更新API密钥以提高安全性
+
+### 部署注意事项
 
 1. **环境变量**：确保所有敏感信息都通过环境变量配置
 2. **数据库**：生产环境使用稳定的MySQL实例

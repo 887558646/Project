@@ -212,6 +212,46 @@ export async function GET(req: NextRequest) {
                   }
                 }
                 
+                // 確保至少有5個個性化問題
+                if (questionsArray.length < 5) {
+                  console.log(`只獲得了 ${questionsArray.length} 個個性化問題，補充到5個`);
+                  const fallbackQuestions = [
+                    {
+                      question: "請詳細說明您選擇資管系的具體原因和動機？",
+                      hint: "建議包含：個人興趣、未來規劃、對資管領域的理解",
+                      category: "personal",
+                      reason: "基於履歷分析，需要更深入了解您的選擇動機"
+                    },
+                    {
+                      question: "您認為自己在資管領域有哪些優勢和需要改進的地方？",
+                      hint: "建議包含：個人優勢、學習經歷、改進計劃",
+                      category: "academic",
+                      reason: "根據履歷分析結果，評估個人能力發展"
+                    },
+                    {
+                      question: "請分享一次您使用資訊科技解決問題的具體經驗？",
+                      hint: "建議包含：問題背景、解決方案、學習收穫",
+                      category: "technical",
+                      reason: "基於履歷內容，深入探討技術應用能力"
+                    },
+                    {
+                      question: "您對企業管理中的資訊系統有什麼了解？",
+                      hint: "建議包含：系統概念、應用場景、個人見解",
+                      category: "technical",
+                      reason: "測試對資管核心領域的理解深度"
+                    },
+                    {
+                      question: "您如何規劃大學四年的學習目標和未來發展？",
+                      hint: "建議包含：短期目標、長期規劃、具體行動",
+                      category: "career",
+                      reason: "基於履歷分析，評估規劃能力和目標明確度"
+                    }
+                  ];
+                  const neededCount = 5 - questionsArray.length;
+                  const additionalQuestions = fallbackQuestions.slice(0, neededCount);
+                  questionsArray = [...questionsArray, ...additionalQuestions];
+                }
+                
                 // 將個性化問題添加到題目列表中
                 const personalizedQuestions = questionsArray.map((q: any, index: number) => ({
                   id: `personalized_${index + 1}`,

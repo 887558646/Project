@@ -86,7 +86,7 @@ async function callOpenAIWithRetry(prompt: string, maxRetries: number = 3) {
     try {
       // 添加超时控制
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
       
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -99,14 +99,14 @@ async function callOpenAIWithRetry(prompt: string, maxRetries: number = 3) {
           messages: [
             { 
               role: "system", 
-              content: "你是一位資深的資管系教授，專門設計面試問題。請根據學生的履歷分析結果，生成5個個性化的面試問題。請務必回傳有效的JSON格式，不要包含任何說明文字。" 
+              content: "你是一位資深的資管系教授，專門設計高度個性化的面試問題。你的任務是根據學生的履歷內容生成恰好5個非常具體的問題，每個問題都必須直接引用履歷中的具體內容。請仔細分析履歷中的每個段落，找出至少5個可以深入探討的具體內容，並針對每個內容設計一個問題。請務必回傳有效的JSON格式，不要包含任何說明文字。" 
             },
             {
               role: "user",
               content: prompt
             }
           ],
-          temperature: 0.7,
+          temperature: 0.5,
           max_tokens: 1000
         }),
         signal: controller.signal
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "缺少履歷內容、分析結果或用戶名" }, { status: 400 })
     }
 
-    // 檢查是否已有保存的個性化問題
+    // 檢查是否已有保存的個性化問題，並比較履歷內容
     const user = await prisma.user.findUnique({
       where: { username },
       include: {
@@ -167,12 +167,17 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // 如果已有個性化問題，直接返回
+    // 檢查履歷內容是否發生變化
+    let shouldRegenerate = true
     if (user && user.resumeAnalyses?.[0]?.personalizedQuestions?.length > 0) {
-      console.log("找到已保存的個性化問題，直接返回")
-      const resumeAnalysis = user.resumeAnalyses[0]
-      if (resumeAnalysis) {
-        const savedQuestions = resumeAnalysis.personalizedQuestions.map(q => ({
+      const latestResumeAnalysis = user.resumeAnalyses[0]
+      
+      // 比較履歷內容是否相同（使用簡單的字符串比較）
+      if (latestResumeAnalysis.originalText === resumeText) {
+        console.log("履歷內容未變化，使用已保存的個性化問題")
+        shouldRegenerate = false
+        
+        const savedQuestions = latestResumeAnalysis.personalizedQuestions.map(q => ({
           question: q.question,
           hint: q.hint,
           category: q.category,
@@ -184,6 +189,9 @@ export async function POST(req: NextRequest) {
           result: savedQuestions,
           message: "使用已保存的個性化問題"
         })
+      } else {
+        console.log("履歷內容已變化，需要重新生成個性化問題")
+        shouldRegenerate = true
       }
     }
 
@@ -193,32 +201,53 @@ export async function POST(req: NextRequest) {
     // 簡化分析結果，只保留關鍵信息
     const simplifiedAnalysis = {
       overallScore: analysisResults.scoreResult?.overallScore || 60,
-      mainIssues: analysisResults.issuesResult?.slice(0, 3) || [], // 只取前3個問題
-      keyStrengths: analysisResults.scoreResult?.categories?.slice(0, 3) || [] // 只取前3個類別
+      mainIssues: Array.isArray(analysisResults.issuesResult) ? analysisResults.issuesResult.slice(0, 3) : [], // 只取前3個問題
+      keyStrengths: Array.isArray(analysisResults.scoreResult?.categories) ? analysisResults.scoreResult.categories.slice(0, 3) : [] // 只取前3個類別
     }
 
-    const prompt = `你是一位資深的資管系教授，請根據學生的履歷內容生成5個個性化的面試問題。
+                           const prompt = `你是一位資深的資管系教授，專門設計高度個性化的面試問題。請根據學生的履歷內容生成恰好5個非常具體的面試問題。
 
-請回傳一個JSON陣列，每個元素包含：
-- question: 問題內容
-- hint: 回答提示
-- category: 問題類型（personal/academic/technical/career）
-- reason: 為什麼問這個問題
+ 重要：必須生成恰好5個問題，不能多也不能少。每個問題都必須基於履歷中的具體內容。
 
-問題設計原則：
-1. 針對履歷中的弱點和需要改進的地方
-2. 深入探討履歷中提到的經歷和興趣
-3. 測試對資管領域的理解和動機
-4. 評估邏輯思維和表達能力
-5. 驗證履歷內容的真實性和深度
+ 請回傳一個JSON陣列，每個元素包含：
+  - question: 問題內容（必須直接引用履歷中的具體內容）
+  - hint: 回答提示
+  - category: 問題類型（personal/academic/technical/career）
+  - reason: 為什麼問這個問題（必須基於履歷中的具體內容）
 
-請你只回傳純JSON，前後不要有任何說明、標題、註解或多餘文字。
+ 問題設計要求：
+ 1. 每個問題必須直接引用履歷中的具體句子、經歷、興趣或特點
+ 2. 針對履歷分析中發現的具體弱點和需要改進的地方
+ 3. 深入探討履歷中提到的具體經歷、專案、興趣或成就
+ 4. 測試對資管領域的理解深度和動機的真實性
+ 5. 驗證履歷內容的邏輯性和一致性
 
-履歷內容：
-${truncatedResume}
+ 問題設計原則：
+  - 不要問通用問題，必須基於履歷中的具體內容
+  - 如果履歷提到特定經歷，要針對該經歷提問
+  - 如果履歷提到特定興趣，要針對該興趣提問
+  - 如果履歷提到特定成就，要針對該成就提問
+  - 如果履歷有邏輯問題，要針對該問題提問
+  - 如果履歷提到特定學校、課程、活動，要針對這些提問
+  - 如果履歷提到特定技能、證照、比賽，要針對這些提問
 
-分析結果：
-${JSON.stringify(simplifiedAnalysis, null, 2)}`
+ 問題範例格式：
+  - "您在履歷中提到[具體句子或內容]，請詳細說明這個經歷..."
+  - "根據您的[具體經歷描述]，您認為..."
+  - "您提到對[具體領域]感興趣，請分享您對這個領域的具體了解..."
+  - "您在履歷中寫道[具體內容]，這與資管系的關聯是什麼？"
+  - "您提到[具體學校/課程/活動]，請分享這段經歷對您的影響..."
+  - "您在[具體比賽/活動]中獲得[具體成就]，請詳細說明..."
+
+ 請仔細分析履歷中的每個段落，找出至少5個可以深入探討的具體內容，並針對每個內容設計一個問題。
+
+ 請你只回傳純JSON，前後不要有任何說明、標題、註解或多餘文字。
+
+ 履歷內容：
+ ${truncatedResume}
+
+ 分析結果：
+ ${JSON.stringify(simplifiedAnalysis, null, 2)}`
 
     const result = await callOpenAIWithRetry(prompt)
     
@@ -232,6 +261,15 @@ ${JSON.stringify(simplifiedAnalysis, null, 2)}`
         // 如果解析失敗，使用備用問題
         questionsArray = getFallbackQuestions()
       }
+    }
+    
+    // 確保至少有5個問題
+    if (questionsArray.length < 5) {
+      console.log(`只生成了 ${questionsArray.length} 個問題，補充到5個`)
+      const fallbackQuestions = getFallbackQuestions()
+      const neededCount = 5 - questionsArray.length
+      const additionalQuestions = fallbackQuestions.slice(0, neededCount)
+      questionsArray = [...questionsArray, ...additionalQuestions]
     }
 
     // 保存個性化問題到數據庫
