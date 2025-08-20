@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Upload, AlertTriangle, Lightbulb, Copy, Save, History, Download, RefreshCw, FileText } from "lucide-react"
+import { ArrowLeft, Upload, AlertTriangle, Lightbulb, Copy, Save, History, Download, RefreshCw, FileText, Target, Sparkles, BarChart3, Edit3, Clock } from "lucide-react"
 import { useRouter } from "next/navigation"
 import mammoth from "mammoth"
 
@@ -98,82 +98,103 @@ export default function ResumeAdvisor() {
       const scorePromise = fetch("/api/resume-score", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resumeText })
+        body: JSON.stringify({ resumeText, username })
       }).then(res => res.json())
-      
-      // 原文標註
+
+      // 問題標註
       const issuesPromise = fetch("/api/resume-issues", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resumeText })
+        body: JSON.stringify({ resumeText, username })
       }).then(res => res.json())
-      
-      // AI重寫建議
+
+      // 重寫建議
       const rewritePromise = fetch("/api/resume-rewrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resumeText })
+        body: JSON.stringify({ resumeText, username })
       }).then(res => res.json())
-      
-      // 段落結構建議
+
+      // 結構分析
       const structurePromise = fetch("/api/resume-structure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resumeText })
+        body: JSON.stringify({ resumeText, username })
       }).then(res => res.json())
-      
-      // 並行請求
-      const [score, issues, rewrite, structure] = await Promise.all([scorePromise, issuesPromise, rewritePromise, structurePromise])
-      
-      if (score.success) setScoreResult(score.result); else setScoreError(score.message || "AI分析失敗")
-      if (issues.success) setIssuesResult(issues.result); else setIssuesError(issues.message || "AI標註失敗")
-      if (rewrite.success) setRewriteResult(rewrite.result); else setRewriteError(rewrite.message || "AI重寫失敗")
-      if (structure.success) setStructureResult(structure.result); else setStructureError(structure.message || "AI結構建議失敗")
+
+      // 並行執行所有分析
+      const [scoreData, issuesData, rewriteData, structureData] = await Promise.all([
+        scorePromise, issuesPromise, rewritePromise, structurePromise
+      ])
+
+      // 處理結果
+      if (scoreData.success) {
+        setScoreResult(scoreData.data)
+      } else {
+        setScoreError(scoreData.message || "評分分析失敗")
+      }
+
+      if (issuesData.success) {
+        setIssuesResult(issuesData.data)
+      } else {
+        setIssuesError(issuesData.message || "問題標註失敗")
+      }
+
+      if (rewriteData.success) {
+        setRewriteResult(rewriteData.data)
+      } else {
+        setRewriteError(rewriteData.message || "重寫建議失敗")
+      }
+
+      if (structureData.success) {
+        setStructureResult(structureData.data)
+      } else {
+        setStructureError(structureData.message || "結構分析失敗")
+      }
+
+      setHasAnalysis(true)
     } catch (error) {
-      setScoreError("AI分析失敗"); setIssuesError("AI標註失敗"); setRewriteError("AI重寫失敗"); setStructureError("AI結構建議失敗")
+      console.error("分析失敗:", error)
+      setScoreError("分析過程中發生錯誤")
+      setIssuesError("分析過程中發生錯誤")
+      setRewriteError("分析過程中發生錯誤")
+      setStructureError("分析過程中發生錯誤")
     } finally {
       setIsAnalyzing(false)
       setScoreLoading(false)
       setIssuesLoading(false)
       setRewriteLoading(false)
       setStructureLoading(false)
-      setHasAnalysis(true)
     }
   }
 
-  const saveAnalysis = async () => {
-    if (!username || !hasAnalysis) return
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
 
-    setSaving(true)
     try {
-      const response = await fetch("/api/resume-analysis/save", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          originalText: resumeText,
-          analysisResults: {
-            scoreResult,
-            issuesResult,
-            rewriteResult,
-            structureResult
-          }
-        })
-      })
+      let text = ""
       
-      const data = await response.json()
-      if (data.success) {
-        alert("✅ 分析結果保存成功！")
-        // 刷新歷史記錄
-        fetchHistory(username)
-      } else {
-        alert("❌ 保存失敗：" + data.message)
+      if (file.type === "text/plain") {
+        text = await file.text()
+      } else if (file.type === "application/pdf") {
+        const arrayBuffer = await file.arrayBuffer()
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i)
+          const textContent = await page.getTextContent()
+          text += textContent.items.map((item: any) => item.str).join(" ") + "\n"
+        }
+      } else if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+        const arrayBuffer = await file.arrayBuffer()
+        const result = await mammoth.extractRawText({ arrayBuffer })
+        text = result.value
       }
+
+      setResumeText(text)
     } catch (error) {
-      console.error("保存失敗:", error)
-      alert("❌ 保存失敗，請稍後重試")
-    } finally {
-      setSaving(false)
+      console.error("檔案讀取失敗:", error)
+      alert("檔案讀取失敗，請檢查檔案格式")
     }
   }
 
@@ -181,122 +202,59 @@ export default function ResumeAdvisor() {
     setResumeText(sampleResume)
   }
 
-  const loadFromHistory = (historyItem: any) => {
-    setResumeText(historyItem.originalText)
-    setScoreResult(historyItem.scoreResult)
-    setIssuesResult(historyItem.issuesResult)
-    setRewriteResult(historyItem.rewriteResult)
-    setStructureResult(historyItem.structureResult)
-    setHasAnalysis(true)
-    setActiveTab("analysis")
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
   }
 
-  const handleDownloadReport = () => {
-    const content = `【原始履歷內容】\n${resumeText}\n\n【AI分析結果】\n整體評分：${scoreResult?.overallScore || 0}/100\n\n【重寫建議】\n${rewriteResult}\n\n【問題標註】\n${issuesResult?.map((issue: any) => `- ${issue.text}: ${issue.suggestion}`).join('\n') || '無'}`
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `resume-analysis-${new Date().toISOString().split('T')[0]}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
-  // 處理txt/pdf/docx檔案上傳
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (file.type === "text/plain") {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        setResumeText(event.target?.result as string)
-      }
-      reader.readAsText(file, "utf-8")
-    } else if (file.type === "application/pdf") {
-      const reader = new FileReader()
-      reader.onload = async (event) => {
-        if (!pdfjsLib) {
-          alert("PDF處理器尚未載入，請稍後重試")
-          return
-        }
-        try {
-          const typedarray = new Uint8Array(event.target?.result as ArrayBuffer)
-          const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise
-          let text = ""
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i)
-            const content = await page.getTextContent()
-            text += content.items.map((item: any) => item.str).join(" ") + "\n"
+  const saveAnalysis = async () => {
+    if (!username || !resumeText.trim()) return
+    setSaving(true)
+    try {
+      const content = `【原始備審資料內容】\n${resumeText}\n\n【AI分析結果】\n整體評分：${scoreResult?.overallScore || 0}/100\n\n【重寫建議】\n${rewriteResult}\n\n【問題標註】\n${issuesResult?.map((issue: any) => `- ${issue.text}: ${issue.suggestion}`).join('\n') || '無'}`
+      
+      await fetch("/api/resume-analysis/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          content,
+          analysis: {
+            score: scoreResult?.overallScore || 0,
+            issues: issuesResult || [],
+            rewrite: rewriteResult,
+            structure: structureResult
           }
-          setResumeText(text)
-        } catch (error) {
-          console.error("PDF解析失敗:", error)
-          alert("PDF檔案解析失敗，請檢查檔案格式")
-        }
-      }
-      reader.readAsArrayBuffer(file)
-    } else if (file.name.endsWith(".docx")) {
-      const reader = new FileReader()
-      reader.onload = async (event) => {
-        try {
-          const arrayBuffer = event.target?.result as ArrayBuffer
-          const result = await mammoth.extractRawText({ arrayBuffer })
-          setResumeText(result.value)
-        } catch (error) {
-          console.error("DOCX解析失敗:", error)
-          alert("DOCX檔案解析失敗，請檢查檔案格式")
-        }
-      }
-      reader.readAsArrayBuffer(file)
-    } else {
-      alert("僅支援 .txt, .pdf, .docx 檔案上傳")
-    }
-  }
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "high":
-        return "text-red-600 bg-red-50 border-red-200"
-      case "medium":
-        return "text-orange-600 bg-orange-50 border-orange-200"
-      default:
-        return "text-yellow-600 bg-yellow-50 border-yellow-200"
+        })
+      })
+      
+      // 重新獲取歷史記錄
+      await fetchHistory(username)
+    } catch (error) {
+      console.error("保存失敗:", error)
+    } finally {
+      setSaving(false)
     }
   }
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case "vague":
-        return "text-blue-600 bg-blue-50 border-blue-200"
-      case "empty":
-        return "text-gray-600 bg-gray-50 border-gray-200"
-      case "exaggerated":
-        return "text-purple-600 bg-purple-50 border-purple-200"
-      case "generic":
-        return "text-indigo-600 bg-indigo-50 border-indigo-200"
+      case "content":
+        return "bg-blue-100 text-blue-700"
       case "logic":
-        return "text-red-600 bg-red-50 border-red-200"
+        return "bg-green-100 text-green-700"
       case "grammar":
-        return "text-orange-600 bg-orange-50 border-orange-200"
+        return "bg-yellow-100 text-yellow-700"
       case "format":
-        return "text-green-600 bg-green-50 border-green-200"
+        return "bg-purple-100 text-purple-700"
       default:
-        return "text-gray-600 bg-gray-50 border-gray-200"
+        return "bg-gray-100 text-gray-700"
     }
   }
 
-  const getCategoryLabel = (category: string) => {
+  const getCategoryName = (category: string) => {
     switch (category) {
-      case "vague":
-        return "模糊不清"
-      case "empty":
-        return "空泛內容"
-      case "exaggerated":
-        return "誇大描述"
-      case "generic":
-        return "通用表達"
+      case "content":
+        return "內容問題"
       case "logic":
         return "邏輯問題"
       case "grammar":
@@ -309,111 +267,190 @@ export default function ResumeAdvisor() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" onClick={() => router.push("/student/dashboard")} className="mr-4 text-pink-600 hover:bg-pink-100">
-              <ArrowLeft className="w-4 h-4 mr-2 text-pink-400" />
-              返回
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white/90 shadow-lg border-b border-white/20 sticky top-0 z-10 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+          <div className="flex items-center h-20">
+            <Button 
+              variant="ghost" 
+              onClick={() => router.push("/student/dashboard")} 
+              className="mr-6 text-pink-600 hover:bg-pink-50 hover:text-pink-700 transition-all duration-200"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              返回儀表板
             </Button>
-            <h1 className="text-xl font-semibold text-pink-600">履歷撰寫建議</h1>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <FileText className="w-6 h-6 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                備審資料撰寫建議
+              </h1>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8">
+        {/* Header Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-pink-600 mb-2">AI 履歷優化助手</h2>
-          <p className="text-blue-500">上傳你的自傳或學習歷程檔案，獲得專業的撰寫建議</p>
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full px-6 py-2 mb-6 border border-pink-200/50">
+              <Sparkles className="w-5 h-5 text-pink-500" />
+              <span className="text-sm font-medium text-pink-700">AI 智能助手</span>
+            </div>
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
+              AI 備審資料優化助手
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              上傳你的自傳或學習歷程檔案，獲得專業的撰寫建議和智能分析
+            </p>
+          </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-pink-100 via-blue-100 to-green-100">
-            <TabsTrigger value="upload">上傳文件</TabsTrigger>
-            <TabsTrigger value="analysis" disabled={!hasAnalysis}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <TabsList className="grid w-full grid-cols-4 bg-white/80 backdrop-blur-sm rounded-2xl p-1 border border-white/30 shadow-lg">
+            <TabsTrigger value="upload" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+              <Upload className="w-4 h-4 mr-2" />
+              上傳文件
+            </TabsTrigger>
+            <TabsTrigger value="analysis" disabled={!hasAnalysis} className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white">
+              <BarChart3 className="w-4 h-4 mr-2" />
               分析結果
             </TabsTrigger>
-            <TabsTrigger value="suggestions" disabled={!hasAnalysis}>
+            <TabsTrigger value="suggestions" disabled={!hasAnalysis} className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white">
+              <Edit3 className="w-4 h-4 mr-2" />
               改善建議
             </TabsTrigger>
-            <TabsTrigger value="history">歷史記錄</TabsTrigger>
+            <TabsTrigger value="history" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white">
+              <Clock className="w-4 h-4 mr-2" />
+              歷史記錄
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="upload" className="space-y-6">
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card className="bg-gradient-to-br from-purple-100 to-purple-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-purple-700">
-                    <Upload className="w-5 h-5 text-pink-400" />
+          <TabsContent value="upload" className="space-y-8">
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* 上传区域 */}
+              <Card className="bg-white/80 backdrop-blur-sm border border-purple-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+                <CardHeader className="bg-gradient-to-br from-purple-50 to-pink-50 border-b border-purple-100/50">
+                  <CardTitle className="flex items-center gap-3 text-purple-700">
+                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                      <Upload className="w-4 h-4 text-white" />
+                    </div>
                     上傳或貼上內容
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">拖拽檔案到此處或點擊上傳</p>
-                    <Button asChild variant="outline" size="sm">
-                      <label>
+                <CardContent className="p-6 space-y-6">
+                  <div className="border-2 border-dashed border-gray-300 rounded-2xl p-8 text-center hover:border-purple-300 transition-colors duration-300">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                      <Upload className="w-8 h-8 text-purple-500" />
+                    </div>
+                    <p className="text-lg font-medium text-gray-700 mb-2">拖拽檔案到此處或點擊上傳</p>
+                    <p className="text-sm text-gray-500 mb-4">支援 .txt, .pdf, .docx 格式</p>
+                    <Button asChild variant="outline" size="lg" className="border-purple-200 text-purple-600 hover:bg-purple-50">
+                      <label className="cursor-pointer">
                         選擇檔案
                         <input type="file" accept=".txt,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleFileChange} />
                       </label>
                     </Button>
-                    <p className="text-xs text-gray-500 mt-2">支援 .txt, .pdf, .docx 格式</p>
                   </div>
 
                   <div className="text-center">
-                    <span className="text-sm text-gray-500">或</span>
+                    <div className="inline-flex items-center gap-2 text-gray-500">
+                      <div className="w-8 h-0.5 bg-gray-300"></div>
+                      <span className="text-sm">或</span>
+                      <div className="w-8 h-0.5 bg-gray-300"></div>
+                    </div>
                   </div>
 
                   <Textarea
                     placeholder="請貼上您的自傳或學習歷程內容..."
                     value={resumeText}
                     onChange={(e) => setResumeText(e.target.value)}
-                    className="min-h-[300px] text-sm leading-relaxed"
+                    className="min-h-[300px] text-base leading-relaxed border-purple-200 focus:border-purple-400 focus:ring-purple-200 rounded-xl resize-none"
                   />
 
-                  <div className="flex gap-2">
-                    <Button onClick={loadSample} variant="outline" size="sm" className="border-pink-200 text-pink-600">載入範例</Button>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={loadSample} 
+                      variant="outline" 
+                      size="lg" 
+                      className="border-pink-200 text-pink-600 hover:bg-pink-50 px-6 py-3 rounded-xl transition-all duration-300"
+                    >
+                      載入範例
+                    </Button>
                     <Button
                       onClick={handleAnalyze}
                       disabled={!resumeText.trim() || isAnalyzing}
-                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white"
+                      className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 text-white px-8 py-3 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                     >
                       {isAnalyzing ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        <div className="flex items-center justify-center">
+                          <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
                           分析中...
-                        </>
+                        </div>
                       ) : (
-                        "開始分析"
+                        <div className="flex items-center justify-center">
+                          <BarChart3 className="w-5 h-5 mr-2" />
+                          開始分析
+                        </div>
                       )}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-blue-100 to-cyan-100">
-                <CardHeader>
-                  <CardTitle className="text-blue-700">分析項目說明</CardTitle>
+              {/* 分析项目说明 */}
+              <Card className="bg-white/80 backdrop-blur-sm border border-blue-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+                <CardHeader className="bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-blue-100/50">
+                  <CardTitle className="flex items-center gap-3 text-blue-700">
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
+                      <Lightbulb className="w-4 h-4 text-white" />
+                    </div>
+                    分析項目說明
+                  </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="p-3 border-l-4 border-blue-500 bg-blue-50">
-                      <h4 className="font-medium text-blue-900">邏輯結構</h4>
-                      <p className="text-sm text-blue-800 mt-1">檢查段落安排、內容組織和邏輯流暢度</p>
+                <CardContent className="p-6">
+                  <div className="space-y-6">
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-200/50">
+                      <h4 className="font-semibold text-blue-700 mb-2 flex items-center gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        智能評分
+                      </h4>
+                      <p className="text-sm text-blue-600 leading-relaxed">
+                        從內容深度、邏輯結構、語言表達等多個維度進行綜合評分，幫助您了解備審資料的整體品質。
+                      </p>
                     </div>
-                    <div className="p-3 border-l-4 border-green-500 bg-green-50">
-                      <h4 className="font-medium text-green-900">動機明確度</h4>
-                      <p className="text-sm text-green-800 mt-1">評估選擇科系的理由是否清晰具體</p>
+
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-xl border border-green-200/50">
+                      <h4 className="font-semibold text-green-700 mb-2 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        問題標註
+                      </h4>
+                      <p className="text-sm text-green-600 leading-relaxed">
+                        自動識別並標註內容中的問題，包括語法錯誤、邏輯問題、格式問題等，提供具體的改進建議。
+                      </p>
                     </div>
-                    <div className="p-3 border-l-4 border-purple-500 bg-purple-50">
-                      <h4 className="font-medium text-purple-900">個人化程度</h4>
-                      <p className="text-sm text-purple-800 mt-1">分析內容的獨特性和個人特色</p>
+
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200/50">
+                      <h4 className="font-semibold text-purple-700 mb-2 flex items-center gap-2">
+                        <Edit3 className="w-4 h-4" />
+                        重寫建議
+                      </h4>
+                      <p className="text-sm text-purple-600 leading-relaxed">
+                        針對問題段落提供重寫建議，保持原意的同時提升表達效果和邏輯清晰度。
+                      </p>
                     </div>
-                    <div className="p-3 border-l-4 border-orange-500 bg-orange-50">
-                      <h4 className="font-medium text-orange-900">語言表達</h4>
-                      <p className="text-sm text-orange-800 mt-1">檢查用詞準確性、語句通順度</p>
+
+                    <div className="bg-gradient-to-r from-orange-50 to-red-50 p-4 rounded-xl border border-orange-200/50">
+                      <h4 className="font-semibold text-orange-700 mb-2 flex items-center gap-2">
+                        <Target className="w-4 h-4" />
+                        結構分析
+                      </h4>
+                      <p className="text-sm text-orange-600 leading-relaxed">
+                        分析文章的整體結構，評估段落安排、邏輯流程和內容組織的合理性。
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -421,7 +458,9 @@ export default function ResumeAdvisor() {
             </div>
           </TabsContent>
 
+          {/* 其他TabsContent保持不变，但需要美化样式 */}
           <TabsContent value="analysis" className="space-y-6">
+            {/* 分析结果内容保持不变，但需要美化样式 */}
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold text-gray-800">分析結果</h3>
               <div className="flex gap-2">
@@ -433,15 +472,6 @@ export default function ResumeAdvisor() {
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {saving ? "保存中..." : "保存結果"}
-                </Button>
-                <Button 
-                  onClick={handleDownloadReport}
-                  disabled={!hasAnalysis}
-                  variant="outline"
-                  className="border-blue-200 text-blue-600"
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  下載報告
                 </Button>
                 <Button 
                   onClick={() => router.push("/student/written-qa")}
@@ -572,7 +602,7 @@ export default function ResumeAdvisor() {
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-sm font-medium">"{issue.text}"</span>
                               <span className={`px-2 py-1 text-xs rounded-full ${getCategoryColor(issue.category)}`}>
-                                {getCategoryLabel(issue.category)}
+                                {getCategoryName(issue.category)}
                               </span>
                               <span className={`px-2 py-1 text-xs rounded-full ${
                                 issue.severity === 'high' ? 'bg-red-100 text-red-700' :

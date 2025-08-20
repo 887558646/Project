@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@/lib/generated/prisma";
+import { getSession } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
-    const { username, questionId, answer, analysis } = await req.json();
+    const { username: bodyUsername, questionId, answer, analysis } = await req.json();
+    const session = getSession()
+    const username = session?.username || bodyUsername
     
     if (!username || !questionId || !answer) {
       return NextResponse.json({ success: false, message: "缺少必要參數" }, { status: 400 });

@@ -1,57 +1,67 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Play, Pause, User, MessageSquare, Save, BarChart3 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { ArrowLeft, Play, Pause, User, MessageSquare, Save, BarChart3, Target, Sparkles, Video, FileText, Clock, Award } from "lucide-react"
+import { useParams, useRouter } from "next/navigation"
 
-const studentData = {
-  id: 1,
-  name: "張小明",
-  school: "台北市立第一高中",
-  email: "zhang.xiaoming@example.com",
-  videoUrl: "/placeholder.svg?height=400&width=600",
-  writtenAnswers: [
-    {
-      question: "請描述一次您克服困難的經歷，以及從中學到了什麼？",
-      answer:
-        "在高二時，我參加了學校的科學展覽競賽。當時我選擇了一個關於環保材料的研究主題，但在實驗過程中遇到了很多困難。首先是材料取得不易，其次是實驗結果與預期不符。我沒有放棄，而是重新檢視實驗設計，向老師請教，並且查閱了大量相關文獻。最終，我調整了實驗方法，成功完成了研究，並在競賽中獲得了第二名。這次經歷讓我學會了面對困難時要保持耐心和毅力，同時也要懂得尋求幫助和不斷學習。",
-    },
-    {
-      question: "為什麼選擇這個科系？您認為自己具備哪些相關的能力或特質？",
-      answer:
-        "我選擇資訊工程系是因為對程式設計和科技創新有濃厚的興趣。從高一開始，我就自學了Python和Java程式語言，並且參與了學校的程式設計社團。我認為自己具備邏輯思維能力強、學習能力佳、以及團隊合作精神等特質。在社團活動中，我曾經帶領團隊開發了一個校園活動管理系統，這個經驗讓我更加確定自己適合這個領域。",
-    },
-  ],
-  aiAnalysis: {
-    overallScore: 85,
-    categories: [
-      { name: "真實性", score: 88 },
-      { name: "具體性", score: 82 },
-      { name: "一致性", score: 90 },
-      { name: "誇大度", score: 15 },
-    ],
-    strengths: ["回答內容具體，有明確的例子支撐", "邏輯結構清晰，表達流暢", "展現了良好的學習態度和解決問題的能力"],
-    improvements: ["可以增加更多量化的成果描述", "在描述個人特質時可以更加具體", "建議加入更多反思和學習心得"],
-  },
-}
+type WrittenAnswer = { id: number; questionId: number; answer: string; createdAt: string }
+type VideoAnswer = { id: number; videoPath: string; durationSec: number; speechRate: number | null; emotionScore: number | null; createdAt: string }
 
 export default function StudentDetail() {
   const router = useRouter()
+  const params = useParams<{ id: string }>()
+  const userId = useMemo(() => parseInt(String(params?.id || "0"), 10), [params])
   const [activeTab, setActiveTab] = useState("video")
   const [teacherComment, setTeacherComment] = useState("")
   const [annotations, setAnnotations] = useState<{ [key: string]: string }>({})
   const [isPlaying, setIsPlaying] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [user, setUser] = useState<{ id: number; username: string } | null>(null)
+  const [writtenAnswers, setWrittenAnswers] = useState<WrittenAnswer[]>([])
+  const [videoAnswers, setVideoAnswers] = useState<VideoAnswer[]>([])
+  const [comments, setComments] = useState<any[]>([])
 
-  const handleSaveComment = () => {
-    // Save teacher comment logic
-    console.log("Saving comment:", teacherComment)
-    alert("評語已儲存！")
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        setLoading(true)
+        const res = await fetch(`/api/teacher/review/student?userId=${userId}`)
+        const data = await res.json()
+        if (!cancelled && data.success) {
+          setUser(data.user)
+          setWrittenAnswers(data.writtenAnswers || [])
+          setVideoAnswers(data.videoAnswers || [])
+          setComments(data.comments || [])
+        }
+      } catch (e) {
+        // ignore
+      } finally {
+        !cancelled && setLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [userId])
+
+  const handleSaveComment = async () => {
+    if (!userId || !teacherComment.trim()) return
+    await fetch('/api/teacher/review/student', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentUserId: userId,
+        targetType: 'written',
+        comment: teacherComment,
+      })
+    })
+    setTeacherComment("")
   }
 
   const handleAnnotation = (questionIndex: number, annotation: string) => {
@@ -61,63 +71,172 @@ export default function StudentDetail() {
     }))
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <User className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-lg font-medium text-gray-600">載入學生資料中...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
-      <header className="bg-white/80 shadow-md border-b sticky top-0 z-10 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" onClick={() => router.push("/teacher/dashboard")} className="mr-4 text-pink-600 hover:bg-pink-100">
-              <ArrowLeft className="w-4 h-4 mr-2 text-pink-400" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white/90 shadow-lg border-b border-white/20 sticky top-0 z-10 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+          <div className="flex items-center h-20">
+            <Button 
+              variant="ghost" 
+              onClick={() => router.push("/teacher/dashboard")} 
+              className="mr-6 text-pink-600 hover:bg-pink-50 hover:text-pink-700 transition-all duration-200"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" />
               返回學生列表
             </Button>
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-green-500" />
+              <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <User className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-pink-600 tracking-tight drop-shadow">{studentData.name}</h1>
-                <p className="text-sm text-blue-500">{studentData.school}</p>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent tracking-tight">
+                  {user?.username || '學生'}
+                </h1>
+                <p className="text-sm text-gray-600">學生 ID: {user?.id}</p>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-pink-100 via-blue-100 to-green-100">
-            <TabsTrigger value="video">錄影面試</TabsTrigger>
-            <TabsTrigger value="written">書面問答</TabsTrigger>
-            <TabsTrigger value="resume">履歷檔案</TabsTrigger>
-            <TabsTrigger value="analysis">AI 分析</TabsTrigger>
-            <TabsTrigger value="feedback">教師評語</TabsTrigger>
+      <main className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full px-6 py-2 mb-6 border border-pink-200/50">
+              <Sparkles className="w-5 h-5 text-pink-500" />
+              <span className="text-sm font-medium text-pink-700">學生詳情</span>
+            </div>
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
+              學生練習評審
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              查看學生的練習表現，提供專業指導和評分
+            </p>
+          </div>
+        </div>
+
+        {/* 统计概览 */}
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-white/80 backdrop-blur-sm border border-blue-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                  <Video className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">{videoAnswers.length}</div>
+                  <div className="text-sm text-gray-600">錄影練習</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border border-green-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">{writtenAnswers.length}</div>
+                  <div className="text-sm text-gray-600">書面練習</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border border-orange-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">
+                    {videoAnswers.reduce((sum, v) => sum + (v.durationSec || 0), 0)}
+                  </div>
+                  <div className="text-sm text-gray-600">總練習時長(秒)</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border border-purple-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                  <Award className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">{comments.length}</div>
+                  <div className="text-sm text-gray-600">教師評語</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <TabsList className="grid w-full grid-cols-5 bg-white/80 backdrop-blur-sm rounded-2xl p-1 border border-white/30 shadow-lg">
+            <TabsTrigger value="video" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white">
+              <Video className="w-4 h-4 mr-2" />
+              錄影面試
+            </TabsTrigger>
+            <TabsTrigger value="written" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white">
+              <FileText className="w-4 h-4 mr-2" />
+              書面問答
+            </TabsTrigger>
+            <TabsTrigger value="resume" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              備審資料
+            </TabsTrigger>
+            <TabsTrigger value="comments" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-500 data-[state=active]:text-white">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              評語記錄
+            </TabsTrigger>
+            <TabsTrigger value="overview" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+              <Target className="w-4 h-4 mr-2" />
+              總覽
+            </TabsTrigger>
           </TabsList>
 
+          {/* 其他TabsContent保持不变，但需要美化样式 */}
           <TabsContent value="video" className="space-y-6">
             <Card className="bg-gradient-to-br from-orange-100 to-red-100">
               <CardHeader>
                 <CardTitle className="text-red-700">面試錄影</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video mb-4">
-                  <img
-                    src={studentData.videoUrl || "/placeholder.svg"}
-                    alt="Student interview video"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Button
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-                      size="lg"
-                    >
-                      {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>總時長: 8:32</span>
-                  <span>上傳時間: 2024-01-15 14:30</span>
+                <div className="space-y-6">
+                  {videoAnswers.length === 0 && (
+                    <div className="text-sm text-gray-600">無錄影資料</div>
+                  )}
+                  {videoAnswers.map((v) => (
+                    <div key={v.id}>
+                      <div className="relative bg-gray-900 rounded-lg overflow-hidden aspect-video mb-2">
+                        <video src={v.videoPath} controls className="w-full h-full object-contain" />
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>總時長: {Math.max(0, v.durationSec || 0)} 秒</span>
+                        <span>上傳時間: {new Date(v.createdAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -129,16 +248,16 @@ export default function StudentDetail() {
               <CardContent>
                 <div className="grid md:grid-cols-3 gap-4">
                   <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">85%</div>
+                    <div className="text-2xl font-bold text-blue-600">{Math.round((videoAnswers.reduce((s, v) => s + (v.speechRate || 0), 0) / Math.max(1, videoAnswers.length)) || 0)}%</div>
                     <div className="text-sm text-blue-800">語速適中</div>
                   </div>
                   <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">78%</div>
+                    <div className="text-2xl font-bold text-green-600">{Math.round((videoAnswers.reduce((s, v) => s + (v.emotionScore || 0), 0) / Math.max(1, videoAnswers.length)) || 0)}%</div>
                     <div className="text-sm text-green-800">情緒穩定</div>
                   </div>
                   <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">92%</div>
-                    <div className="text-sm text-purple-800">眼神接觸</div>
+                    <div className="text-2xl font-bold text-purple-600">{videoAnswers.length}</div>
+                    <div className="text-sm text-purple-800">錄影次數</div>
                   </div>
                 </div>
               </CardContent>
@@ -146,7 +265,7 @@ export default function StudentDetail() {
           </TabsContent>
 
           <TabsContent value="written" className="space-y-6">
-            {studentData.writtenAnswers.map((qa, index) => (
+            {writtenAnswers.map((qa, index) => (
               <Card key={index} className="bg-gradient-to-br from-blue-100 to-cyan-100">
                 <CardHeader>
                   <CardTitle className="text-blue-700 text-lg">題目 {index + 1}</CardTitle>
@@ -154,10 +273,10 @@ export default function StudentDetail() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="p-4 bg-blue-50 rounded-lg">
-                      <p className="font-medium text-blue-900">{qa.question}</p>
+                      <p className="font-medium text-blue-900">問題ID: {qa.questionId}</p>
                     </div>
                     <div className="p-4 bg-white/80 rounded-lg">
-                      <p className="text-gray-800 leading-relaxed">{qa.answer}</p>
+                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">{qa.answer}</p>
                     </div>
                     <div className="border-t pt-4">
                       <label className="block text-sm font-medium text-pink-600 mb-2">教師註解</label>
@@ -167,6 +286,16 @@ export default function StudentDetail() {
                         onChange={(e) => handleAnnotation(index, e.target.value)}
                         className="min-h-[100px] border-pink-200 focus:border-pink-400 focus:ring-pink-200"
                       />
+                      <div className="flex justify-end mt-2">
+                        <Button size="sm" onClick={async () => {
+                          if (!annotations[index]?.trim()) return
+                          await fetch('/api/teacher/review/student', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ studentUserId: userId, targetType: 'written', questionId: qa.questionId, comment: annotations[index] })
+                          })
+                        }} className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white">提交此條評語</Button>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

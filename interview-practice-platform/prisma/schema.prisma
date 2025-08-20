@@ -25,6 +25,12 @@ model User {
   writtenAnswers WrittenAnswer[]
   // 關聯到履歷分析記錄
   resumeAnalyses ResumeAnalysis[]
+  // 關聯到錄影面試回答
+  videoAnswers   VideoAnswer[]
+  // 關聯到教師評論（作為學生）
+  studentComments TeacherComment[] @relation("StudentComments")
+  // 關聯到教師評論（作為教師）
+  teacherComments TeacherComment[] @relation("TeacherAuthored")
 }
 
 model WrittenAnswer {
@@ -48,8 +54,14 @@ model Question {
   question String   @db.Text
   hint     String   @db.Text
   category String   // 例如: "personal", "academic", "career"
+  school   String?  // 學校名稱，例如: "台大", "清大", "交大", "政大", "成大", "中央", "中山", "中興", "台科大", "北科大", "通用"
   isActive Boolean  @default(true)
   createdAt DateTime @default(now())
+
+  // 關聯到錄影面試回答
+  videoAnswers VideoAnswer[]
+  // 關聯到教師評論
+  teacherComments TeacherComment[]
 }
 
 model ResumeAnalysis {
@@ -78,4 +90,53 @@ model PersonalizedQuestion {
   createdAt     DateTime @default(now())
 
   resumeAnalysis ResumeAnalysis @relation(fields: [resumeAnalysisId], references: [id])
+}
+
+// 用於保存錄影面試的答案與分析元資料
+model VideoAnswer {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  questionId   Int?
+  questionText String?  @db.Text
+  videoPath    String
+  durationSec  Int
+  speechRate   Int?
+  emotionScore Int?
+  transcript   String?  @db.Text
+  analysisJson String?  @db.Text
+  thumbnailPath String?
+  sizeBytes    Int
+  mimeType     String
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id])
+  question     Question? @relation(fields: [questionId], references: [id])
+
+  teacherComments TeacherComment[]
+
+  @@index([userId])
+  @@index([questionId])
+  @@unique([userId, questionId])
+}
+
+model TeacherComment {
+  id             Int      @id @default(autoincrement())
+  studentUserId  Int
+  teacherUserId  Int
+  targetType     String   // 'video' | 'written'
+  videoAnswerId  Int?
+  questionId     Int?
+  comment        String   @db.Text
+  score          Int?
+  createdAt      DateTime @default(now())
+
+  student        User     @relation("StudentComments", fields: [studentUserId], references: [id])
+  teacher        User     @relation("TeacherAuthored", fields: [teacherUserId], references: [id])
+  videoAnswer    VideoAnswer? @relation(fields: [videoAnswerId], references: [id])
+  question       Question?    @relation(fields: [questionId], references: [id])
+
+  @@index([studentUserId])
+  @@index([teacherUserId])
+  @@index([videoAnswerId])
+  @@index([questionId])
 }

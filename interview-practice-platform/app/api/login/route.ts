@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@/lib/generated/prisma";
 import bcrypt from "bcryptjs";
+import { setSessionCookieOnResponse } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
@@ -17,5 +18,8 @@ export async function POST(req: NextRequest) {
   if (!valid) {
     return NextResponse.json({ success: false, message: "密碼錯誤" }, { status: 401 });
   }
-  return NextResponse.json({ success: true, role: user.role });
+  // 設置會話 Cookie 在響應上
+  const res = NextResponse.json({ success: true, role: user.role, username: user.username })
+  setSessionCookieOnResponse(res, { userId: user.id, username: user.username, role: user.role })
+  return res
 } 

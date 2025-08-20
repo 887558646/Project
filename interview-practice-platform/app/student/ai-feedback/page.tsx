@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -14,22 +14,22 @@ import {
   CheckCircle,
   AlertTriangle,
   Lightbulb,
+  BarChart3,
+  Sparkles,
+  Award,
+  Users,
+  Clock,
+  FileText,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
-const radarData = [
-  { category: "真實性", score: 85, maxScore: 100 },
-  { category: "具體性", score: 78, maxScore: 100 },
-  { category: "一致性", score: 92, maxScore: 100 },
-  { category: "誇大度", score: 25, maxScore: 100, reverse: true }, // Lower is better
-]
-
-const progressData = [
-  { date: "2024-01-15", score: 72 },
-  { date: "2024-01-22", score: 76 },
-  { date: "2024-01-29", score: 81 },
-  { date: "2024-02-05", score: 85 },
-]
+interface SummaryData {
+  success: boolean
+  user: { id: number; username: string; role: string }
+  written: { count: number; avgClarity: number; avgExaggeration: number; items: any[] }
+  video: { count: number; avgSpeechRate: number; avgEmotionScore: number; avgDurationSec: number; items: any[] }
+  combined: { overallScore: number }
+}
 
 const feedbackSections = [
   {
@@ -58,10 +58,29 @@ const feedbackSections = [
 export default function AIFeedback() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState("overview")
+  const [summary, setSummary] = useState<SummaryData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [username, setUsername] = useState("")
 
-  const overallScore = Math.round(
-    radarData.reduce((sum, item) => sum + (item.reverse ? 100 - item.score : item.score), 0) / radarData.length,
-  )
+  useEffect(() => {
+    setUsername(window.localStorage.getItem("username") || "")
+  }, [])
+
+  useEffect(() => {
+    if (!username) return
+    ;(async () => {
+      try {
+        setLoading(true)
+        const res = await fetch(`/api/ai-feedback/summary?username=${username}`)
+        const data = await res.json()
+        if (data.success) setSummary(data)
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [username])
+
+  const overallScore = summary?.combined?.overallScore ?? 0
 
   const downloadReport = () => {
     // Simulate PDF download
@@ -71,49 +90,157 @@ export default function AIFeedback() {
     link.click()
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <BarChart3 className="w-8 h-8 text-white" />
+          </div>
+          <p className="text-lg font-medium text-gray-600">載入分析報告中...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-100 via-blue-100 to-green-100">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white/90 shadow-lg border-b border-white/20 sticky top-0 z-10 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+          <div className="flex items-center justify-between h-20">
             <div className="flex items-center">
-              <Button variant="ghost" onClick={() => router.push("/student/dashboard")} className="mr-4">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                返回
+              <Button 
+                variant="ghost" 
+                onClick={() => router.push("/student/dashboard")} 
+                className="mr-6 text-pink-600 hover:bg-pink-50 hover:text-pink-700 transition-all duration-200"
+              >
+                <ArrowLeft className="w-5 h-5 mr-2" />
+                返回儀表板
               </Button>
-              <h1 className="text-xl font-semibold text-pink-600">AI 評分報告</h1>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+                  AI 分析報告
+                </h1>
+              </div>
             </div>
-            <Button onClick={downloadReport} className="bg-gradient-to-r from-pink-500 to-blue-500 hover:from-blue-500 hover:to-pink-500 text-white">
-              <Download className="w-4 h-4 mr-2 text-pink-200" />
+            <Button
+              onClick={downloadReport}
+              className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-purple-500 hover:to-blue-500 text-white px-6 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <Download className="w-4 h-4 mr-2" />
               下載報告
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-8">
+        {/* Header Section */}
         <div className="mb-8">
-          <div className="bg-gradient-to-r from-green-400 via-blue-400 to-pink-400 text-white rounded-lg p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-bold mb-2 text-pink-100">整體評分</h2>
-                <p className="text-blue-100">基於您的面試表現綜合分析</p>
-              </div>
-              <div className="text-right">
-                <div className="text-5xl font-bold text-pink-200">{overallScore}</div>
-                <div className="text-blue-100">/ 100</div>
-              </div>
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 rounded-full px-6 py-2 mb-6 border border-pink-200/50">
+              <Sparkles className="w-5 h-5 text-pink-500" />
+              <span className="text-sm font-medium text-pink-700">智能分析報告</span>
             </div>
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-pink-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
+              面試練習分析報告
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              基於您的練習表現，我們為您提供了詳細的分析和改進建議
+            </p>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-pink-100 via-blue-100 to-green-100">
-            <TabsTrigger value="overview">總覽</TabsTrigger>
-            <TabsTrigger value="detailed">詳細分析</TabsTrigger>
-            <TabsTrigger value="video">語音視覺</TabsTrigger>
-            <TabsTrigger value="written">文字分析</TabsTrigger>
-            <TabsTrigger value="progress">進步追蹤</TabsTrigger>
+        {/* 总体评分卡片 */}
+        <div className="mb-8">
+          <Card className="bg-white/80 backdrop-blur-sm border border-purple-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <CardContent className="p-8">
+              <div className="text-center">
+                <div className="w-24 h-24 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                  <Award className="w-12 h-12 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">整體評分</h3>
+                <div className="text-5xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent mb-4">
+                  {overallScore}
+                </div>
+                <div className="text-lg text-gray-600 mb-6">滿分 100 分</div>
+                <Progress 
+                  value={overallScore} 
+                  className="h-3 bg-gradient-to-r from-pink-200 via-purple-200 to-blue-200 rounded-full overflow-hidden"
+                />
+                <div className="mt-4 text-sm text-gray-500">
+                  {overallScore >= 90 ? "優秀" : overallScore >= 80 ? "良好" : overallScore >= 70 ? "中等" : "需要改進"}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 统计概览 */}
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <Card className="bg-white/80 backdrop-blur-sm border border-blue-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">{summary?.written?.count || 0}</div>
+                  <div className="text-sm text-gray-600">書面練習</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border border-green-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">{summary?.video?.count || 0}</div>
+                  <div className="text-sm text-gray-600">錄影練習</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/80 backdrop-blur-sm border border-orange-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-gray-800">
+                    {summary?.video?.avgDurationSec ? Math.round(summary.video.avgDurationSec / 60) : 0}
+                  </div>
+                  <div className="text-sm text-gray-600">平均時長(分鐘)</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <TabsList className="grid w-full grid-cols-3 bg-white/80 backdrop-blur-sm rounded-2xl p-1 border border-white/30 shadow-lg">
+            <TabsTrigger value="overview" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-purple-500 data-[state=active]:text-white">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              總覽
+            </TabsTrigger>
+            <TabsTrigger value="details" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-cyan-500 data-[state=active]:text-white">
+              <Target className="w-4 h-4 mr-2" />
+              詳細分析
+            </TabsTrigger>
+            <TabsTrigger value="suggestions" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-500 data-[state=active]:to-emerald-500 data-[state=active]:text-white">
+              <Lightbulb className="w-4 h-4 mr-2" />
+              改進建議
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -124,17 +251,34 @@ export default function AIFeedback() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {radarData.map((item, index) => (
-                      <div key={index}>
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium">{item.category}</span>
-                          <span className="text-sm text-gray-500">
-                            {item.reverse ? 100 - item.score : item.score}/100
-                          </span>
-                        </div>
-                        <Progress value={item.reverse ? 100 - item.score : item.score} className="h-3" />
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">清晰度</span>
+                        <span className="text-sm text-gray-500">{summary?.written?.avgClarity ?? 0}/100</span>
                       </div>
-                    ))}
+                      <Progress value={summary?.written?.avgClarity ?? 0} className="h-3" />
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">誇大度（越低越好）</span>
+                        <span className="text-sm text-gray-500">{summary?.written?.avgExaggeration ?? 0}/100</span>
+                      </div>
+                      <Progress value={100 - (summary?.written?.avgExaggeration ?? 0)} className="h-3" />
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">語速</span>
+                        <span className="text-sm text-gray-500">{summary?.video?.avgSpeechRate ?? 0}/100</span>
+                      </div>
+                      <Progress value={summary?.video?.avgSpeechRate ?? 0} className="h-3" />
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-sm font-medium">情緒穩定度</span>
+                        <span className="text-sm text-gray-500">{summary?.video?.avgEmotionScore ?? 0}/100</span>
+                      </div>
+                      <Progress value={summary?.video?.avgEmotionScore ?? 0} className="h-3" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -196,7 +340,7 @@ export default function AIFeedback() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="detailed" className="space-y-6">
+          <TabsContent value="details" className="space-y-6">
             {feedbackSections.map((section, index) => (
               <Card key={index}>
                 <CardHeader>
@@ -248,7 +392,7 @@ export default function AIFeedback() {
             ))}
           </TabsContent>
 
-          <TabsContent value="video" className="space-y-6">
+          <TabsContent value="suggestions" className="space-y-6">
             <div className="bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-lg p-6 mb-6">
               <h3 className="text-2xl font-bold mb-2">語音與視覺分析報告</h3>
               <p className="text-red-100">基於您的錄影面試表現分析</p>
@@ -365,181 +509,6 @@ export default function AIFeedback() {
                         音調變化可以更豐富一些
                       </li>
                     </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="written" className="space-y-6">
-            <div className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg p-6 mb-6">
-              <h3 className="text-2xl font-bold mb-2">文字回答分析報告</h3>
-              <p className="text-blue-100">基於您的書面問答表現分析</p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>內容品質評估</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">誇大度控制</span>
-                        <span className="text-sm text-gray-500">75/100</span>
-                      </div>
-                      <Progress value={75} className="h-3" />
-                      <p className="text-xs text-gray-500 mt-1">適度使用修飾詞</p>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">具體性</span>
-                        <span className="text-sm text-gray-500">82/100</span>
-                      </div>
-                      <Progress value={82} className="h-3" />
-                      <p className="text-xs text-gray-500 mt-1">回答具體，有例證支撐</p>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">一致性</span>
-                        <span className="text-sm text-gray-500">90/100</span>
-                      </div>
-                      <Progress value={90} className="h-3" />
-                      <p className="text-xs text-gray-500 mt-1">前後邏輯一致</p>
-                    </div>
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">語意結構</span>
-                        <span className="text-sm text-gray-500">78/100</span>
-                      </div>
-                      <Progress value={78} className="h-3" />
-                      <p className="text-xs text-gray-500 mt-1">結構清晰，層次分明</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>逐句分析標註</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="p-3 bg-green-50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                        <span className="text-sm font-medium text-green-800">優秀句子</span>
-                      </div>
-                      <p className="text-sm text-green-700">"通過參與三個程式設計專案，我學會了團隊協作的重要性"</p>
-                    </div>
-                    <div className="p-3 bg-orange-50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-1">
-                        <AlertTriangle className="w-4 h-4 text-orange-600" />
-                        <span className="text-sm font-medium text-orange-800">需要改善</span>
-                      </div>
-                      <p className="text-sm text-orange-700">
-                        "我非常熱愛程式設計" → 建議改為 "我對程式設計有濃厚興趣"
-                      </p>
-                    </div>
-                    <div className="p-3 bg-blue-50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Lightbulb className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-800">建議補充</span>
-                      </div>
-                      <p className="text-sm text-blue-700">可以增加具體的學習成果或獲得的技能</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="progress" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  分數趨勢
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {progressData.map((data, index) => (
-                    <div key={index} className="flex items-center gap-4">
-                      <div className="w-20 text-sm text-gray-500">{data.date}</div>
-                      <div className="flex-1">
-                        <Progress value={data.score} className="h-3" />
-                      </div>
-                      <div className="w-12 text-sm font-medium">{data.score}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-6 p-4 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-2 text-green-700">
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="font-medium">進步幅度：+13分</span>
-                  </div>
-                  <p className="text-sm text-green-600 mt-1">相較於首次測試，您的整體表現有顯著提升！</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>練習建議</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium mb-4">短期改善目標</h4>
-                    <div className="space-y-3">
-                      <div className="p-3 border-l-4 border-blue-500 bg-blue-50">
-                        <h5 className="font-medium text-blue-900">語言表達</h5>
-                        <p className="text-sm text-blue-800 mt-1">練習使用更精確的詞彙，避免模糊和誇大的表達方式</p>
-                      </div>
-                      <div className="p-3 border-l-4 border-green-500 bg-green-50">
-                        <h5 className="font-medium text-green-900">具體化描述</h5>
-                        <p className="text-sm text-green-800 mt-1">在回答中加入具體的數據、時間和成果，增強說服力</p>
-                      </div>
-                      <div className="p-3 border-l-4 border-purple-500 bg-purple-50">
-                        <h5 className="font-medium text-purple-900">結構化思考</h5>
-                        <p className="text-sm text-purple-800 mt-1">使用STAR法則（情況、任務、行動、結果）組織回答</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium mb-4">練習方法</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
-                          1
-                        </div>
-                        <div>
-                          <p className="font-medium">每日練習</p>
-                          <p className="text-sm text-gray-600">每天練習一個面試問題，錄音自我檢視</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
-                          2
-                        </div>
-                        <div>
-                          <p className="font-medium">模擬面試</p>
-                          <p className="text-sm text-gray-600">與朋友或家人進行模擬面試，獲得即時反饋</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs font-medium text-blue-600">
-                          3
-                        </div>
-                        <div>
-                          <p className="font-medium">案例準備</p>
-                          <p className="text-sm text-gray-600">準備3-5個具體的個人經歷案例，適用不同問題</p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </CardContent>

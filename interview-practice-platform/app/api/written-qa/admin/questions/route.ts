@@ -23,7 +23,7 @@ export async function GET() {
 // 新增題目
 export async function POST(req: NextRequest) {
   try {
-    const { question, hint, category } = await req.json();
+    const { question, hint, category, school } = await req.json();
     
     if (!question || !hint || !category) {
       return NextResponse.json({ success: false, message: "缺少必要參數" }, { status: 400 });
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
         question,
         hint,
         category,
+        school: school || null,
         isActive: true
       }
     });
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
 // 更新題目
 export async function PUT(req: NextRequest) {
   try {
-    const { id, question, hint, category, isActive } = await req.json();
+    const { id, question, hint, category, school, isActive } = await req.json();
     
     if (!id || !question || !hint || !category) {
       return NextResponse.json({ success: false, message: "缺少必要參數" }, { status: 400 });
@@ -64,6 +65,7 @@ export async function PUT(req: NextRequest) {
         question,
         hint,
         category,
+        school: school || null,
         isActive: isActive !== undefined ? isActive : true
       }
     });
