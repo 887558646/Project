@@ -98,7 +98,7 @@ export default function CombinedPractice() {
               const schools = schoolsData.questions
                 .map((q: any) => q.school)
                 .filter((school: any): school is string => typeof school === 'string' && school !== "通用")
-              const uniqueSchools = [...new Set(schools)]
+              const uniqueSchools = [...new Set(schools)] as string[]
               setAvailableSchools(["通用", ...uniqueSchools])
             }
           } catch (e) {
@@ -132,7 +132,7 @@ export default function CombinedPractice() {
     const pickProfessorVoice = (voices: SpeechSynthesisVoice[]) => {
       if (!voices || voices.length === 0) return
       // 1) 優先挑選華語/中文、台灣或普通話
-      const zhVoices = voices.filter(v => /zh|中文|國語|國語|普通話|華語/i.test(`${v.lang} ${v.name}`))
+      const zhVoices = voices.filter(v => / 國語|國語|普通話|華語/i.test(`${v.lang} ${v.name}`))
       // 2) 嘗試挑選較成熟/男聲（名稱常見關鍵字，跨平台兼容）
       const maleKeywords = /(male|男|yun|bo|liang|zhiyu|yunjian|yunjie|yunxi)/i
       const mature = zhVoices.find(v => maleKeywords.test(v.name))
@@ -144,7 +144,7 @@ export default function CombinedPractice() {
     load()
     ss.onvoiceschanged = load
     return () => {
-      try { ss.onvoiceschanged = null as unknown as any } catch {}
+      try { ss.onvoiceschanged = null } catch {}
     }
   }, [])
 
@@ -212,7 +212,7 @@ export default function CombinedPractice() {
     setAnswers(next)
   }
 
-  // 处理语音识别结果
+  // 處理語音識別結果
   const handleVoiceTranscript = (transcript: string) => {
     const next = [...answers]
     next[currentIndex] = (next[currentIndex] || "") + transcript
@@ -237,7 +237,7 @@ export default function CombinedPractice() {
     setSpeechRate(wpm)
 
     // 填充詞統計
-    const fillers = (text.match(/(嗯|啊|這個|那个|那個|就是|你知道|然後|然后)/g) || []).length
+    const fillers = (text.match(/(嗯|啊|這個|那個|就是|你知道|然後)/g) || []).length
     setFillerCount(fillers)
 
     // 清晰度：句長適中、標點合理、填充詞少
@@ -705,10 +705,10 @@ export default function CombinedPractice() {
                     className="min-h-[150px] sm:min-h-[200px] text-sm sm:text-base leading-relaxed border-blue-200 focus:border-blue-400 focus:ring-blue-200 rounded-xl resize-none"
                   />
                   
-                  {/* 语音识别提示（極簡） */}
+                  {/* 語音識別提示（極簡） */}
                   <div className="mt-2 sm:mt-3">
                     <VoiceRecognition
-                      onTranscript={() => {}}
+                      onTranscript={handleVoiceTranscript}
                       onInterim={handleVoiceInterim}
                       isRecording={isRecording}
                       active={isRecording}
