@@ -31,6 +31,8 @@ model User {
   studentComments TeacherComment[] @relation("StudentComments")
   // 關聯到教師評論（作為教師）
   teacherComments TeacherComment[] @relation("TeacherAuthored")
+  // 關聯到自我介紹分析記錄
+  selfIntroAnalyses SelfIntroAnalysis[]
 }
 
 model WrittenAnswer {
@@ -90,6 +92,38 @@ model PersonalizedQuestion {
   createdAt     DateTime @default(now())
 
   resumeAnalysis ResumeAnalysis @relation(fields: [resumeAnalysisId], references: [id])
+}
+
+// 自我介紹分析記錄
+model SelfIntroAnalysis {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  introText     String   @db.Text
+  duration      Int      // 練習時長（秒）
+  speechRate    Float?   // 語速（音節/秒）
+  energy        Float?   // 語音能量（%）
+  pitch         Float?   // 音調（Hz）
+  confidence    Float?   // 自信度（分）
+  continuity    Float?   // 語音連續性（分）
+  overallScore  Float?   // 總體評分
+  createdAt     DateTime @default(now())
+
+  user          User     @relation(fields: [userId], references: [id])
+  // 關聯到個性化問題
+  personalizedQuestions SelfIntroPersonalizedQuestion[]
+}
+
+// 自我介紹個性化問題
+model SelfIntroPersonalizedQuestion {
+  id            Int      @id @default(autoincrement())
+  selfIntroAnalysisId Int
+  question      String   @db.Text
+  hint          String   @db.Text
+  category      String   // personal, academic, technical, career
+  reason        String   @db.Text
+  createdAt     DateTime @default(now())
+
+  selfIntroAnalysis SelfIntroAnalysis @relation(fields: [selfIntroAnalysisId], references: [id])
 }
 
 // 用於保存錄影面試的答案與分析元資料

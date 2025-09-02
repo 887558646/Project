@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- 主機： 127.0.0.1
--- 產生時間： 2025-08-20 10:14:43
+-- 產生時間： 2025-09-02 18:03:17
 -- 伺服器版本： 10.4.32-MariaDB
 -- PHP 版本： 8.2.12
 
@@ -42,16 +42,7 @@ CREATE TABLE `personalizedquestion` (
 --
 
 INSERT INTO `personalizedquestion` (`id`, `resumeAnalysisId`, `question`, `hint`, `category`, `reason`, `createdAt`) VALUES
-(3, 1, '你在履歷中提到「從小我就對科學充滿興趣，特別是資訊科學領域」，能否分享一下是什麼激發了你對科學和資訊科學的興趣？有沒有具體的經驗或者事件？', '回答時可以提到你對科學的興趣是如何產生的，以及你在資訊科學領域中的具體學習或實踐經驗。', 'personal', '這個問題可以幫助我們了解你對科學和資訊科學的興趣是如何產生的，以及你是否有相關的學習或實踐經驗來支持你的興趣。', '2025-08-06 05:20:17.941'),
-(4, 1, '請詳細說明您選擇資管系的具體原因和動機？', '建議包含：個人興趣、未來規劃、對資管領域的理解', 'personal', '基於履歷分析，需要更深入了解您的選擇動機', '2025-08-06 05:20:17.946'),
-(5, 1, '您認為自己在資管領域有哪些優勢和需要改進的地方？', '建議包含：個人優勢、學習經歷、改進計劃', 'academic', '根據履歷分析結果，評估個人能力發展', '2025-08-06 05:20:17.950'),
-(6, 1, '請分享一次您使用資訊科技解決問題的具體經驗？', '建議包含：問題背景、解決方案、學習收穫', 'technical', '基於履歷內容，深入探討技術應用能力', '2025-08-06 05:20:17.952'),
-(7, 1, '您對企業管理中的資訊系統有什麼了解？', '建議包含：系統概念、應用場景、個人見解', 'technical', '測試對資管核心領域的理解深度', '2025-08-06 05:20:17.954'),
-(8, 3, '你在自傳中提到「我對資料科學與人工智慧領域充滿熱情」，能否分享一次你在這兩個領域中學習或實作的經驗，並說明這次經驗如何加深你對這兩個領域的熱情？', '請提供具體的學習或實作經驗，包括你所面臨的挑戰、你如何解決這些挑戰，以及這次經驗如何影響你對資料科學和人工智慧的看法。', 'academic', '這個問題可以幫助我們了解學生對資料科學和人工智慧的深入理解，以及他的學習動機和實作能力。', '2025-08-06 07:17:11.782'),
-(9, 3, '請詳細說明您選擇資管系的具體原因和動機？', '建議包含：個人興趣、未來規劃、對資管領域的理解', 'personal', '基於履歷分析，需要更深入了解您的選擇動機', '2025-08-06 07:17:11.787'),
-(10, 3, '您認為自己在資管領域有哪些優勢和需要改進的地方？', '建議包含：個人優勢、學習經歷、改進計劃', 'academic', '根據履歷分析結果，評估個人能力發展', '2025-08-06 07:17:11.791'),
-(11, 3, '請分享一次您使用資訊科技解決問題的具體經驗？', '建議包含：問題背景、解決方案、學習收穫', 'technical', '基於履歷內容，深入探討技術應用能力', '2025-08-06 07:17:11.793'),
-(12, 3, '您對企業管理中的資訊系統有什麼了解？', '建議包含：系統概念、應用場景、個人見解', 'technical', '測試對資管核心領域的理解深度', '2025-08-06 07:17:11.795');
+(3, 1, '你在履歷中提到「從小我就對科學充滿興趣，特別是資訊科學領域」，能否分享一下是什麼激發了你對科學和資訊科學的興趣？有沒有具體的經驗或者事件？', '回答時可以提到你對科學的興趣是如何產生的，以及你在資訊科學領域中的具體學習或實踐經驗。', 'personal', '這個問題可以幫助我們了解你對科學和資訊科學的興趣是如何產生的，以及你是否有相關的學習或實踐經驗來支持你的興趣。', '2025-08-06 05:20:17.941');
 
 -- --------------------------------------------------------
 
@@ -224,6 +215,42 @@ INSERT INTO `resumeanalysis` (`id`, `userId`, `originalText`, `scoreResult`, `is
 -- --------------------------------------------------------
 
 --
+-- 資料表結構 `selfintroanalysis`
+--
+
+CREATE TABLE `selfintroanalysis` (
+  `id` int(11) NOT NULL,
+  `userId` int(11) NOT NULL,
+  `introText` text NOT NULL,
+  `duration` int(11) NOT NULL,
+  `speechRate` double DEFAULT NULL,
+  `energy` double DEFAULT NULL,
+  `pitch` double DEFAULT NULL,
+  `confidence` double DEFAULT NULL,
+  `continuity` double DEFAULT NULL,
+  `overallScore` double DEFAULT NULL,
+  `createdAt` datetime(3) NOT NULL DEFAULT current_timestamp(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- 資料表結構 `selfintropersonalizedquestion`
+--
+
+CREATE TABLE `selfintropersonalizedquestion` (
+  `id` int(11) NOT NULL,
+  `selfIntroAnalysisId` int(11) NOT NULL,
+  `question` text NOT NULL,
+  `hint` text NOT NULL,
+  `category` varchar(191) NOT NULL,
+  `reason` text NOT NULL,
+  `createdAt` datetime(3) NOT NULL DEFAULT current_timestamp(3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- 資料表結構 `teachercomment`
 --
 
@@ -328,7 +355,8 @@ CREATE TABLE `_prisma_migrations` (
 INSERT INTO `_prisma_migrations` (`id`, `checksum`, `finished_at`, `migration_name`, `logs`, `rolled_back_at`, `started_at`, `applied_steps_count`) VALUES
 ('699717ec-e60a-4944-a8b0-7da487a4bb0f', '46a739a2a833eda91bad3b93afc6f1f79f93f0838b77f9211e1f99fc437aab22', '2025-08-05 19:15:09.670', '20250723043121_init', NULL, NULL, '2025-08-05 19:15:09.654', 1),
 ('8ce7fad2-1362-41f5-8e06-a1f4793aebcc', '42a4d06d19a8c4d29e7c97119caaee3a76fda2d26cc1f6e490aec9413a83a932', '2025-08-20 06:42:43.612', '20250820064243_add_school_to_questions', NULL, NULL, '2025-08-20 06:42:43.248', 1),
-('ba525f3a-6076-4b36-9280-fd2611ba3c6d', 'a91641632bce4e325e79765893e0ac1ccc4a01eeac525d8bdbbc698fdeb527f5', '2025-08-05 19:15:19.028', '20250805191518_add_personalized_questions', NULL, NULL, '2025-08-05 19:15:18.852', 1);
+('ba525f3a-6076-4b36-9280-fd2611ba3c6d', 'a91641632bce4e325e79765893e0ac1ccc4a01eeac525d8bdbbc698fdeb527f5', '2025-08-05 19:15:19.028', '20250805191518_add_personalized_questions', NULL, NULL, '2025-08-05 19:15:18.852', 1),
+('c2c3ccf1-5695-4ad6-a383-3efc543f8d7c', 'b468b41e7bde28051a38e8a180d27acb65c8570a2fb2027695a39981113f546a', '2025-09-02 06:22:49.885', '20250902062249_add_self_intro_tables', NULL, NULL, '2025-09-02 06:22:49.772', 1);
 
 --
 -- 已傾印資料表的索引
@@ -353,6 +381,20 @@ ALTER TABLE `question`
 ALTER TABLE `resumeanalysis`
   ADD PRIMARY KEY (`id`),
   ADD KEY `ResumeAnalysis_userId_fkey` (`userId`);
+
+--
+-- 資料表索引 `selfintroanalysis`
+--
+ALTER TABLE `selfintroanalysis`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `SelfIntroAnalysis_userId_fkey` (`userId`);
+
+--
+-- 資料表索引 `selfintropersonalizedquestion`
+--
+ALTER TABLE `selfintropersonalizedquestion`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `SelfIntroPersonalizedQuestion_selfIntroAnalysisId_fkey` (`selfIntroAnalysisId`);
 
 --
 -- 資料表索引 `teachercomment`
@@ -416,6 +458,18 @@ ALTER TABLE `resumeanalysis`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- 使用資料表自動遞增(AUTO_INCREMENT) `selfintroanalysis`
+--
+ALTER TABLE `selfintroanalysis`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- 使用資料表自動遞增(AUTO_INCREMENT) `selfintropersonalizedquestion`
+--
+ALTER TABLE `selfintropersonalizedquestion`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- 使用資料表自動遞增(AUTO_INCREMENT) `teachercomment`
 --
 ALTER TABLE `teachercomment`
@@ -454,6 +508,18 @@ ALTER TABLE `personalizedquestion`
 --
 ALTER TABLE `resumeanalysis`
   ADD CONSTRAINT `ResumeAnalysis_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user` (`id`) ON UPDATE CASCADE;
+
+--
+-- 資料表的限制式 `selfintroanalysis`
+--
+ALTER TABLE `selfintroanalysis`
+  ADD CONSTRAINT `SelfIntroAnalysis_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user` (`id`) ON UPDATE CASCADE;
+
+--
+-- 資料表的限制式 `selfintropersonalizedquestion`
+--
+ALTER TABLE `selfintropersonalizedquestion`
+  ADD CONSTRAINT `SelfIntroPersonalizedQuestion_selfIntroAnalysisId_fkey` FOREIGN KEY (`selfIntroAnalysisId`) REFERENCES `selfintroanalysis` (`id`) ON UPDATE CASCADE;
 
 --
 -- 資料表的限制式 `teachercomment`

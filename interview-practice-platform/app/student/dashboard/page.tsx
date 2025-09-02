@@ -90,7 +90,7 @@ export default function StudentDashboard() {
         </div>
 
         {/* Feature Cards */}
-        <div className="grid lg:grid-cols-2 gap-8 mb-16">
+        <div className="grid lg:grid-cols-3 gap-8 mb-16">
           {/* 備審資料撰寫建議 */}
           <Card className="group hover:shadow-2xl transition-all duration-500 cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -99,8 +99,8 @@ export default function StudentDashboard() {
                 <FileText className="w-10 h-10 text-white" />
               </div>
               <CardTitle className="text-3xl text-purple-700 font-bold mb-3">備審資料撰寫建議</CardTitle>
-              <CardDescription className="text-lg text-purple-600 font-medium">
-                上傳自傳與學習歷程，獲得AI優化建議
+              <CardDescription className="text-sm text-purple-700">
+                上傳自傳與學習歷程，獲得結構、語言與重點之專業建議
               </CardDescription>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -131,7 +131,39 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
 
-          {/* 綜合練習 */}
+          {/* 自我介紹（置中） */}
+          <Card className="group hover:shadow-2xl transition-all duration-500 cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <CardHeader className="text-center relative z-10">
+              <div className="mx-auto w-20 h-20 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center mb-6 shadow-xl group-hover:scale-110 transition-transform duration-300">
+                <User className="w-10 h-10 text-white" />
+              </div>
+              <CardTitle className="text-3xl text-orange-700 font-bold mb-3">自我介紹</CardTitle>
+              <CardDescription className="text-sm text-orange-700">
+                由 3D 教授引導完成 2 分鐘自我介紹，語音即時轉繁體並生成個性化題目
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="relative z-10">
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+                  <div className="text-sm font-medium text-orange-700 mb-1">語音輸入</div>
+                  <div className="text-xs text-gray-600">自我介紹自動轉繁體</div>
+                </div>
+                <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 border border-white/30">
+                  <div className="text-sm font-medium text-orange-700 mb-1">個性化題目</div>
+                  <div className="text-xs text-gray-600">一鍵生成 5 題練習</div>
+                </div>
+              </div>
+              <Button 
+                onClick={() => router.push("/student/self-intro")}
+                className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-amber-500 hover:to-orange-500 text-white text-lg font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 py-6"
+              >
+                進入自我介紹
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* 綜合練習（移至右側） */}
           <Card className="group hover:shadow-2xl transition-all duration-500 cursor-pointer rounded-3xl border-0 bg-gradient-to-br from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 overflow-hidden relative">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <CardHeader className="text-center relative z-10">
@@ -139,8 +171,8 @@ export default function StudentDashboard() {
                 <Video className="w-10 h-10 text-white" />
               </div>
               <CardTitle className="text-3xl text-blue-700 font-bold mb-3">綜合練習</CardTitle>
-              <CardDescription className="text-lg text-blue-600 font-medium">
-                書面 + 錄影同步練習，獲得綜合分析
+              <CardDescription className="text-sm text-blue-700">
+                書面與錄影同步練習，提供即時分析與練習報告
               </CardDescription>
             </CardHeader>
             <CardContent className="relative z-10">

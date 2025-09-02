@@ -84,6 +84,30 @@ export default function ResumeAdvisor() {
     }
   }
 
+  // 從歷史記錄載入分析結果
+  const loadFromHistory = (item: any) => {
+    try {
+      setActiveTab("analysis")
+      setResumeText(item?.originalText || "")
+      setScoreResult(item?.scoreResult || null)
+      setIssuesResult(item?.issuesResult || null)
+      setRewriteResult(item?.rewriteResult || "")
+      setStructureResult(item?.structureResult || null)
+      setHasAnalysis(true)
+    } catch (e) {
+      console.error('載入歷史分析失敗:', e)
+    }
+  }
+
+  // 依據嚴重程度回傳樣式
+  const getSeverityColor = (severity?: string) => {
+    const s = (severity || '').toLowerCase()
+    if (s === 'high' || s === 'severe' || s === 'critical') return 'bg-red-50 border-red-200'
+    if (s === 'medium' || s === 'moderate') return 'bg-amber-50 border-amber-200'
+    if (s === 'low' || s === 'minor') return 'bg-green-50 border-green-200'
+    return 'bg-gray-50 border-gray-200'
+  }
+
   const handleAnalyze = async () => {
     setIsAnalyzing(true)
     setHasAnalysis(false)

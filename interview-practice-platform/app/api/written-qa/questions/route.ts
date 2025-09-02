@@ -186,26 +186,19 @@ export async function GET(req: NextRequest) {
       console.log("從預設題庫獲取隨機題目:", questions.length, "題");
     }
 
-    // 如果需要個性化題目，嘗試獲取用戶的履歷分析結果
+    // 如果需要個性化題目，嘗試合併：履歷 + 自我介紹
     if (includePersonalized && username) {
       try {
         console.log("嘗試獲取個性化題目...");
-        
         const user = await prisma.user.findUnique({ where: { username } });
-        if (!user) {
-          console.log("用戶不存在:", username);
-        } else {
+        if (user) {
+          // 1) 履歷個性化（沿用既有生成流程）
           const latestResumeAnalysis = await prisma.resumeAnalysis.findFirst({
             where: { userId: user.id },
             orderBy: { createdAt: 'desc' }
           });
 
-          if (!latestResumeAnalysis) {
-            console.log("用戶沒有履歷分析記錄");
-          } else {
-            console.log("找到履歷分析記錄，開始生成個性化問題...");
-            
-            // 調用個性化問題生成API
+          if (latestResumeAnalysis) {
             const personalizedResponse = await fetch(`${req.nextUrl.origin}/api/resume-analysis/generate-questions`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -221,144 +214,56 @@ export async function GET(req: NextRequest) {
               })
             });
 
-            console.log("個性化問題API響應狀態:", personalizedResponse.status);
-
             if (personalizedResponse.ok) {
               const personalizedData = await personalizedResponse.json();
-              console.log("個性化問題API響應:", personalizedData);
-              
               if (personalizedData.success && personalizedData.result) {
-                // 確保result是數組格式
                 let questionsArray = personalizedData.result;
                 if (!Array.isArray(questionsArray)) {
-                  // 如果是單個問題對象，轉換為數組
                   if (questionsArray && typeof questionsArray === 'object' && questionsArray.question) {
                     questionsArray = [questionsArray];
                   } else {
-                    console.log("個性化問題格式不正確，使用備用問題");
-                    addFallbackPersonalizedQuestions();
-                    return;
+                    questionsArray = [];
                   }
                 }
-                
-                // 確保至少有5個個性化問題
-                if (questionsArray.length < 5) {
-                  console.log(`只獲得了 ${questionsArray.length} 個個性化問題，補充到5個`);
-                  const fallbackQuestions = [
-                    {
-                      question: "請詳細說明您選擇資管系的具體原因和動機？",
-                      hint: "建議包含：個人興趣、未來規劃、對資管領域的理解",
-                      category: "personal",
-                      reason: "基於履歷分析，需要更深入了解您的選擇動機"
-                    },
-                    {
-                      question: "您認為自己在資管領域有哪些優勢和需要改進的地方？",
-                      hint: "建議包含：個人優勢、學習經歷、改進計劃",
-                      category: "academic",
-                      reason: "根據履歷分析結果，評估個人能力發展"
-                    },
-                    {
-                      question: "請分享一次您使用資訊科技解決問題的具體經驗？",
-                      hint: "建議包含：問題背景、解決方案、學習收穫",
-                      category: "technical",
-                      reason: "基於履歷內容，深入探討技術應用能力"
-                    },
-                    {
-                      question: "您對企業管理中的資訊系統有什麼了解？",
-                      hint: "建議包含：系統概念、應用場景、個人見解",
-                      category: "technical",
-                      reason: "測試對資管核心領域的理解深度"
-                    },
-                    {
-                      question: "您如何規劃大學四年的學習目標和未來發展？",
-                      hint: "建議包含：短期目標、長期規劃、具體行動",
-                      category: "career",
-                      reason: "基於履歷分析，評估規劃能力和目標明確度"
-                    }
-                  ];
-                  const neededCount = 5 - questionsArray.length;
-                  const additionalQuestions = fallbackQuestions.slice(0, neededCount);
-                  questionsArray = [...questionsArray, ...additionalQuestions];
-                }
-                
-                // 將個性化問題添加到題目列表中
-                const personalizedQuestions = questionsArray.map((q: any, index: number) => ({
-                  id: `personalized_${index + 1}`,
+                const resumePersonalized = questionsArray.slice(0, 5).map((q: any, index: number) => ({
+                  id: `resume_personalized_${index + 1}`,
                   question: q.question,
                   hint: q.hint,
                   category: q.category,
                   isPersonalized: true,
                   reason: q.reason
                 }));
-
-                questions = [...questions, ...personalizedQuestions];
-                console.log("成功添加個性化題目:", personalizedQuestions.length, "題");
-              } else {
-                console.log("個性化問題API返回失敗:", personalizedData.message);
-                // 使用備用個性化問題
-                addFallbackPersonalizedQuestions();
+                questions = [...questions, ...resumePersonalized];
               }
-            } else {
-              console.log("個性化問題API請求失敗:", personalizedResponse.status);
-              // 使用備用個性化問題
-              addFallbackPersonalizedQuestions();
             }
+          }
+
+          // 2) 自我介紹個性化：讀取最新 SelfIntroAnalysis 關聯的題目
+          const latestSelfIntro = await prisma.selfIntroAnalysis.findFirst({
+            where: { userId: user.id },
+            orderBy: { createdAt: 'desc' },
+            include: { personalizedQuestions: true }
+          });
+
+          if (latestSelfIntro?.personalizedQuestions?.length) {
+            const introPersonalized = latestSelfIntro.personalizedQuestions
+              .slice()
+              .sort((a: any, b: any) => (b.createdAt as any) - (a.createdAt as any))
+              .slice(0, 5)
+              .map((q: any, index: number) => ({
+                id: `intro_personalized_${index + 1}`,
+                question: q.question,
+                hint: q.hint,
+                category: q.category,
+                isPersonalized: true,
+                reason: q.reason
+              }));
+            questions = [...questions, ...introPersonalized];
           }
         }
       } catch (error) {
-        console.error("獲取個性化問題失敗:", error);
-        // 使用備用個性化問題
-        addFallbackPersonalizedQuestions();
+        console.error("合併個性化題目失敗:", error);
       }
-    }
-
-    // 備用個性化問題函數
-    function addFallbackPersonalizedQuestions() {
-      const fallbackQuestions = [
-        {
-          id: "personalized_1",
-          question: "請詳細說明您選擇資管系的具體原因和動機？",
-          hint: "建議包含：個人興趣、未來規劃、對資管領域的理解",
-          category: "personal",
-          isPersonalized: true,
-          reason: "基於履歷分析，需要更深入了解您的選擇動機"
-        },
-        {
-          id: "personalized_2",
-          question: "您認為自己在資管領域有哪些優勢和需要改進的地方？",
-          hint: "建議包含：個人優勢、學習經歷、改進計劃",
-          category: "academic",
-          isPersonalized: true,
-          reason: "根據履歷分析結果，評估個人能力發展"
-        },
-        {
-          id: "personalized_3",
-          question: "請分享一次您使用資訊科技解決問題的具體經驗？",
-          hint: "建議包含：問題背景、解決方案、學習收穫",
-          category: "technical",
-          isPersonalized: true,
-          reason: "基於履歷內容，深入探討技術應用能力"
-        },
-        {
-          id: "personalized_4",
-          question: "您對企業管理中的資訊系統有什麼了解？",
-          hint: "建議包含：系統概念、應用場景、個人見解",
-          category: "technical",
-          isPersonalized: true,
-          reason: "測試對資管核心領域的理解深度"
-        },
-        {
-          id: "personalized_5",
-          question: "您如何規劃大學四年的學習目標和未來發展？",
-          hint: "建議包含：短期目標、長期規劃、具體行動",
-          category: "career",
-          isPersonalized: true,
-          reason: "基於履歷分析，評估規劃能力和目標明確度"
-        }
-      ];
-      
-      questions = [...questions, ...fallbackQuestions];
-      console.log("使用備用個性化題目:", fallbackQuestions.length, "題");
     }
 
     console.log("最終題目數量:", questions.length);

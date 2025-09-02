@@ -22,10 +22,12 @@ interface Question {
 
 export default function CombinedPractice() {
   const router = useRouter()
+  const MAX_DURATION_SEC = 180
   const [username, setUsername] = useState("")
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [selectedSchool, setSelectedSchool] = useState("通用") // 新增學校選擇狀態
+  const [questionMode, setQuestionMode] = useState<'regular' | 'mix' | 'personalized'>('mix') // 題目來源模式
   const [availableSchools, setAvailableSchools] = useState<string[]>(["通用", "台大", "清大", "交大", "政大", "成大", "中央", "中山", "中興", "台科大", "北科大"])
 
   // Written state
@@ -50,6 +52,8 @@ export default function CombinedPractice() {
   const [recordedBlobUrl, setRecordedBlobUrl] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadMessage, setUploadMessage] = useState<string | null>(null)
+  const [permissionError, setPermissionError] = useState<string | null>(null)
+  const [remainingSec, setRemainingSec] = useState<number>(MAX_DURATION_SEC)
   
   // Virtual Interviewer state
   const [isSpeaking, setIsSpeaking] = useState(false)
@@ -64,7 +68,21 @@ export default function CombinedPractice() {
 
   useEffect(() => {
     setUsername(window.localStorage.getItem("username") || "")
+    // 復原使用者上次選擇的學校/題目來源
+    const savedSchool = window.localStorage.getItem("combinedPractice:selectedSchool")
+    if (savedSchool) setSelectedSchool(savedSchool)
+    const savedMode = window.localStorage.getItem("combinedPractice:questionMode") as 'regular'|'mix'|'personalized' | null
+    if (savedMode) setQuestionMode(savedMode)
   }, [])
+
+  // 監控學校選擇並保存
+  useEffect(() => {
+    try { window.localStorage.setItem("combinedPractice:selectedSchool", selectedSchool) } catch {}
+  }, [selectedSchool])
+
+  useEffect(() => {
+    try { window.localStorage.setItem("combinedPractice:questionMode", questionMode) } catch {}
+  }, [questionMode])
 
   useEffect(() => {
     if (!username) return
@@ -80,14 +98,29 @@ export default function CombinedPractice() {
         } catch {
           setCaptureType(null)
         }
-        const res = await fetch(`/api/written-qa/questions?username=${username}&personalized=true&school=${selectedSchool}`)
+        const includePersonalized = questionMode !== 'regular'
+        const res = await fetch(`/api/written-qa/questions?username=${username}&personalized=${includePersonalized}&school=${selectedSchool}`)
         const data = await res.json()
         if (data.success) {
-          setQuestions(data.questions)
-          setAnswers(new Array(data.questions.length).fill(""))
+          // 依模式篩選題目
+          let fetchedQuestions: Question[] = data.questions
+          if (questionMode === 'personalized') {
+            fetchedQuestions = fetchedQuestions.filter((q: any) => q.isPersonalized)
+          } else if (questionMode === 'regular') {
+            fetchedQuestions = fetchedQuestions.filter((q: any) => !q.isPersonalized)
+          }
+          setQuestions(fetchedQuestions)
+          // 復原本地緩存的答案（依模式與學校）
+          let restored: string[] = new Array(fetchedQuestions.length).fill("")
+          try {
+            const storageKey = `combinedPractice:answers:${username}:${selectedSchool}:${questionMode}`
+            const saved = JSON.parse(window.localStorage.getItem(storageKey) || '{}') as Record<string, string>
+            restored = fetchedQuestions.map((q: any) => saved[String(typeof q.id === 'string' ? q.id : q.id)] || "")
+          } catch {}
+          setAnswers(restored)
           // 初始化虛擬面試官
-          if (data.questions.length > 0) {
-            speakQuestion(data.questions[0])
+          if (fetchedQuestions.length > 0) {
+            speakQuestion(fetchedQuestions[0])
           }
           
           // 獲取所有可用的學校列表
@@ -98,7 +131,7 @@ export default function CombinedPractice() {
               const schools = schoolsData.questions
                 .map((q: any) => q.school)
                 .filter((school: any): school is string => typeof school === 'string' && school !== "通用")
-              const uniqueSchools = [...new Set(schools)] as string[]
+              const uniqueSchools = [...new Set(schools)]
               setAvailableSchools(["通用", ...uniqueSchools])
             }
           } catch (e) {
@@ -114,7 +147,23 @@ export default function CombinedPractice() {
         setLoading(false)
       }
     })()
-  }, [username, selectedSchool]) // 添加selectedSchool依賴
+  }, [username, selectedSchool, questionMode]) // 依賴加入 questionMode
+
+  // 自動保存（去抖動）
+  useEffect(() => {
+    if (!questions.length || !username) return
+    const handle = setTimeout(() => {
+      try {
+        const storageKey = `combinedPractice:answers:${username}:${selectedSchool}:${questionMode}`
+        const map: Record<string, string> = {}
+        questions.forEach((q, idx) => {
+          map[String(typeof q.id === 'string' ? q.id : q.id)] = answers[idx] || ""
+        })
+        window.localStorage.setItem(storageKey, JSON.stringify(map))
+      } catch {}
+    }, 400)
+    return () => clearTimeout(handle)
+  }, [answers, questions, username, selectedSchool, questionMode])
 
   // 初始化語音合成
   useEffect(() => {
@@ -132,7 +181,7 @@ export default function CombinedPractice() {
     const pickProfessorVoice = (voices: SpeechSynthesisVoice[]) => {
       if (!voices || voices.length === 0) return
       // 1) 優先挑選華語/中文、台灣或普通話
-      const zhVoices = voices.filter(v => / 國語|國語|普通話|華語/i.test(`${v.lang} ${v.name}`))
+      const zhVoices = voices.filter(v => /zh|中文|國語|國語|普通話|華語/i.test(`${v.lang} ${v.name}`))
       // 2) 嘗試挑選較成熟/男聲（名稱常見關鍵字，跨平台兼容）
       const maleKeywords = /(male|男|yun|bo|liang|zhiyu|yunjian|yunjie|yunxi)/i
       const mature = zhVoices.find(v => maleKeywords.test(v.name))
@@ -144,7 +193,7 @@ export default function CombinedPractice() {
     load()
     ss.onvoiceschanged = load
     return () => {
-      try { ss.onvoiceschanged = null } catch {}
+      try { ss.onvoiceschanged = null as unknown as any } catch {}
     }
   }, [])
 
@@ -201,6 +250,11 @@ export default function CombinedPractice() {
         // 基於當前文本動態更新分析
         const currentText = answers[currentIndex] || ""
         updateLiveAnalysis(currentText)
+        setRemainingSec((prev) => Math.max(0, prev - 1))
+        // 達到最長限制自動停止
+        if (recordingTime + 1 >= MAX_DURATION_SEC) {
+          stopRecording()
+        }
       }, 1000)
     }
     return () => clearInterval(interval)
@@ -212,7 +266,7 @@ export default function CombinedPractice() {
     setAnswers(next)
   }
 
-  // 處理語音識別結果
+  // 处理语音识别结果
   const handleVoiceTranscript = (transcript: string) => {
     const next = [...answers]
     next[currentIndex] = (next[currentIndex] || "") + transcript
@@ -232,12 +286,16 @@ export default function CombinedPractice() {
   const updateLiveAnalysis = (text: string) => {
     const seconds = Math.max(recordingTime, 1)
     // 估算中文字數：以字符長度/2 粗略估算
-    const estimatedWords = Math.max(1, Math.round(text.replace(/\s/g, "").length / 2))
+    const estimatedWords = Math.max(1, computeCnWordCount(text))
     const wpm = Math.min(180, Math.max(40, Math.round((estimatedWords / seconds) * 60)))
     setSpeechRate(wpm)
 
     // 填充詞統計
-    const fillers = (text.match(/(嗯|啊|這個|那個|就是|你知道|然後)/g) || []).length
+<<<<<<< HEAD
+    const fillers = (text.match(/(嗯|啊|這個|那個|就是|你知道|然後|呃|額|其實|就是說)/g) || []).length
+=======
+    const fillers = (text.match(/(嗯|啊|這個|那个|那個|就是|你知道|然後|然后)/g) || []).length
+>>>>>>> parent of a0b2e4c (中華民國萬歲，大補丁去簡體入繁體)
     setFillerCount(fillers)
 
     // 清晰度：句長適中、標點合理、填充詞少
@@ -293,7 +351,7 @@ export default function CombinedPractice() {
           questionId: typeof questions[currentIndex].id === "string" ? 0 : questions[currentIndex].id,
           answer: answers[currentIndex],
           analysis: {
-            wordCount: answers[currentIndex].trim().split(/\s+/).length,
+            wordCount: computeCnWordCount(answers[currentIndex]),
             clarityScore: 0,
             exaggerationScore: 0,
             issues: []
@@ -316,6 +374,8 @@ export default function CombinedPractice() {
       setRecordedBlob(null)
       setRecordedBlobUrl(null)
       setUploadMessage(null)
+      setPermissionError(null)
+      setRemainingSec(MAX_DURATION_SEC)
 
       // 設置回聲消除，避免把系統語音朗讀錄入
       const constraints = captureType === 'video'
@@ -360,8 +420,13 @@ export default function CombinedPractice() {
         speechSynthesisRef.current.cancel()
       }
       setIsMuted(true)
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
+      if (err && (err.name === 'NotAllowedError' || err.name === 'NotFoundError')) {
+        setPermissionError("請允許瀏覽器使用麥克風/攝影機，或確認裝置已連接。")
+      } else {
+        setPermissionError("啟動錄製時發生錯誤，請重試或更換瀏覽器。")
+      }
     }
   }
 
@@ -376,6 +441,19 @@ export default function CombinedPractice() {
     setIsRecording(false)
     // 錄製結束後恢復之前的靜音狀態
     setIsMuted(wasMutedBeforeRecording)
+  }
+
+  // 中文字數估算（CJK 字 + 非 CJK 單字）
+  const computeCnWordCount = (text: string): number => {
+    if (!text) return 0
+    const noSpace = text.replace(/\s/g, "")
+    const cjkCount = (noSpace.match(/[\u4E00-\u9FFF]/g) || []).length
+    const nonCjkTokens = noSpace
+      .replace(/[\u4E00-\u9FFF]/g, ' ')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean).length
+    return cjkCount + nonCjkTokens
   }
 
   const uploadRecording = async () => {
@@ -502,6 +580,17 @@ export default function CombinedPractice() {
               <div className="text-xs sm:text-sm text-gray-500 bg-white/60 backdrop-blur-sm rounded-full px-3 sm:px-4 py-1.5 sm:py-2 w-fit">
                 書面 150-250 字、錄影 2-3 分鐘
               </div>
+              {/* 題目來源模式選擇 */}
+              <Select value={questionMode} onValueChange={(v) => setQuestionMode(v as any)}>
+                <SelectTrigger className="w-36 sm:w-44 border-gray-200 focus:border-pink-400 focus:ring-pink-200 rounded-xl text-xs sm:text-sm">
+                  <SelectValue placeholder="題目來源" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mix">一般+個性化</SelectItem>
+                  <SelectItem value="regular">僅一般題</SelectItem>
+                  <SelectItem value="personalized">僅個性化</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={selectedSchool} onValueChange={setSelectedSchool}>
                 <SelectTrigger className="w-32 sm:w-40 border-gray-200 focus:border-pink-400 focus:ring-pink-200 rounded-xl text-xs sm:text-sm">
                   <SelectValue />
@@ -592,6 +681,7 @@ export default function CombinedPractice() {
                       <div className="absolute top-2 sm:top-4 left-2 sm:left-4 bg-red-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-medium flex items-center gap-1 sm:gap-2 shadow-lg">
                         <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full animate-pulse"></div>
                         REC {new Date(recordingTime * 1000).toISOString().substring(14, 19)}
+                        <span className="ml-2 opacity-80">剩餘 {Math.max(0, remainingSec)} 秒</span>
                       </div>
                     )}
                   </div>
@@ -609,6 +699,11 @@ export default function CombinedPractice() {
 
                 {/* 控制按鈕 */}
                 <div className="space-y-3 sm:space-y-4">
+                  {permissionError && (
+                    <div className="bg-red-50 text-red-700 border border-red-200 rounded-lg px-3 py-2 text-xs sm:text-sm">
+                      {permissionError}
+                    </div>
+                  )}
                   <div className="flex justify-center">
                     {!isRecording ? (
                       <Button 
@@ -705,10 +800,10 @@ export default function CombinedPractice() {
                     className="min-h-[150px] sm:min-h-[200px] text-sm sm:text-base leading-relaxed border-blue-200 focus:border-blue-400 focus:ring-blue-200 rounded-xl resize-none"
                   />
                   
-                  {/* 語音識別提示（極簡） */}
+                  {/* 语音识别提示（極簡） */}
                   <div className="mt-2 sm:mt-3">
                     <VoiceRecognition
-                      onTranscript={handleVoiceTranscript}
+                      onTranscript={() => {}}
                       onInterim={handleVoiceInterim}
                       isRecording={isRecording}
                       active={isRecording}

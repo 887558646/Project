@@ -10,6 +10,8 @@
 - **书面问答**：实时文本分析和个性化题目生成
 - **录影面试**：模拟面试录影功能
 - **AI反馈**：详细的面试表现分析报告
+- **OpenSMILE语速分析**：专业级语音分析，包含语速、流畅度、自信度评估
+- **实时语音分析**：支持实时语音指标监控和即时反馈
 
 ## 技术栈
 
@@ -17,6 +19,7 @@
 - **UI组件**：Radix UI, Tailwind CSS
 - **数据库**：MySQL + Prisma ORM
 - **AI服务**：OpenAI GPT-4 API
+- **语音分析**：OpenSMILE + FFmpeg
 - **包管理**：pnpm
 
 ## 环境设置
@@ -46,6 +49,10 @@ DATABASE_URL="mysql://username:password@localhost:3306/interview_platform"
 
 # OpenAI API密钥（请从 https://platform.openai.com/api-keys 获取）
 OPENAI_API_KEY="your-openai-api-key-here"
+
+# OpenSMILE配置（用于语速分析）
+OPENSMILE_BINARY="SMILExtract"
+OPENSMILE_CONFIG="./config/opensmile/speech_analysis.conf"
 ```
 
 ### 4. 数据库设置
@@ -61,7 +68,16 @@ pnpm exec prisma migrate deploy
 pnpm exec prisma migrate status
 ```
 
-### 5. 启动开发服务器
+### 5. 安装OpenSMILE（用于语速分析）
+
+请参考 `docs/OPENSMILE_SETUP.md` 获取详细安装指南。
+
+安装完成后，运行测试：
+```bash
+pnpm run test:opensmile
+```
+
+### 6. 启动开发服务器
 
 ```bash
 # 方法1：使用环境变量启动脚本（推荐）

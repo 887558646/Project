@@ -31,8 +31,9 @@ export function clearSession() {
   cookies().delete(COOKIE_NAME)
 }
 
-export function getSession(): { userId: number; username: string; role: string } | null {
-  const token = cookies().get(COOKIE_NAME)?.value
+export async function getSession(): Promise<{ userId: number; username: string; role: string } | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(COOKIE_NAME)?.value
   if (!token) return null
   try {
     return jwt.verify(token, AUTH_SECRET) as any
