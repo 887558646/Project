@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const username = searchParams.get('username')
     
-    console.log("History API received:", { username })
+    console.log("Self-intro History API received:", { username })
     
     if (!username) {
       return NextResponse.json({ 
@@ -34,17 +34,14 @@ export async function GET(req: NextRequest) {
       }, { status: 404 })
     }
 
-    // 獲取用戶的履歷分析歷史
-    const history = await prisma.resumeAnalysis.findMany({
+    // 獲取用戶的自我介紹分析歷史
+    const history = await prisma.selfIntroAnalysis.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
-        originalText: true,
-        scoreResult: true,
-        issuesResult: true,
-        rewriteResult: true,
-        structureResult: true,
+        introText: true,
+        aiAnalysis: true,
         overallScore: true,
         createdAt: true
       }
@@ -53,13 +50,11 @@ export async function GET(req: NextRequest) {
     // 解析JSON字段
     const formattedHistory = history.map(item => ({
       ...item,
-      scoreResult: JSON.parse(item.scoreResult || '{}'),
-      issuesResult: JSON.parse(item.issuesResult || '[]'),
-      structureResult: JSON.parse(item.structureResult || '[]'),
+      aiAnalysis: JSON.parse(item.aiAnalysis || '{}'),
       createdAt: item.createdAt.toISOString()
     }))
 
-    console.log("History found:", formattedHistory.length, "records")
+    console.log("Self-intro history found:", formattedHistory.length, "records")
 
     return new NextResponse(JSON.stringify({ 
       success: true, 
@@ -71,7 +66,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("獲取履歷分析歷史失敗:", error)
+    console.error("獲取自我介紹分析歷史失敗:", error)
     return NextResponse.json({ 
       success: false, 
       message: "獲取歷史記錄失敗" 

@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
+import { config } from 'dotenv'
+import { resolve } from 'path'
+
+// 在API路由中手動加載環境變量
+config({ path: resolve(process.cwd(), '.env') })
 
 function extractFirstJson(raw: string): any | null {
   if (!raw) return null
@@ -84,20 +89,21 @@ function extractFirstJson(raw: string): any | null {
 }
 
 export async function POST(req: NextRequest) {
-  const { resume } = await req.json()
+  const { resume, resumeText } = await req.json()
+  const content = resume || resumeText
   const apiKey = process.env.OPENAI_API_KEY
-  if (!resume || !apiKey) return NextResponse.json({ success: false, message: "缺少內容或API Key" }, { status: 400 })
+  if (!content || !apiKey) return NextResponse.json({ success: false, message: "缺少內容或API Key" }, { status: 400 })
 
   const prompt = `你是一位資深的資管系教授，請針對下方自傳內容提供專業的段落結構建議。
 
 請回傳一個JSON陣列，每個元素包含：
 
-- section: 段落名稱
-- purpose: 該段落的目的和作用
-- key_points: 該段落應包含的重點內容（陣列）
-- writing_tips: 撰寫該段落的技巧和注意事項
-- common_mistakes: 該段落常見的錯誤
-- word_count: 建議字數範圍
+- section: 段落名稱（中文）
+- purpose: 該段落的目的和作用（中文）
+- key_points: 該段落應包含的重點內容（陣列，中文）
+- writing_tips: 撰寫該段落的技巧和注意事項（中文）
+- common_mistakes: 該段落常見的錯誤（中文）
+- word_count: 建議字數範圍（中文，例如"100-150字"）
 
 建議的段落結構：
 1. 引言段落：個人背景、選擇資管系的契機
@@ -106,10 +112,10 @@ export async function POST(req: NextRequest) {
 4. 未來規劃段落：短期目標、長期規劃
 5. 結語段落：總結、對資管系的期待
 
-請你只回傳純JSON，前後不要有任何說明、標題、註解或多餘文字，否則會導致解析失敗。
+重要：所有內容都必須使用繁體中文，不要使用英文。請你只回傳純JSON，前後不要有任何說明、標題、註解或多餘文字，否則會導致解析失敗。
 
 自傳內容：
-${resume}`
+${content}`
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -198,10 +204,15 @@ ${resume}`
       ]
     }
 
-    return NextResponse.json({ 
+    return new NextResponse(JSON.stringify({ 
       success: true, 
-      result,
+      result, 
       message: "結構建議完成"
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
     })
   } catch (error) {
     console.error("結構建議失敗:", error)

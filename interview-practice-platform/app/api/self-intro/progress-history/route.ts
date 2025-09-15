@@ -25,12 +25,14 @@ export async function GET(req: NextRequest) {
         pitch: true,
         confidence: true,
         continuity: true,
-        overallScore: true
+        overallScore: true,
+        aiAnalysis: true
       }
     })
 
     const history = analyses.map(a => ({
       id: a.id,
+      timestamp: a.createdAt.getTime(),
       date: a.createdAt.toISOString(),
       introText: a.introText,
       duration: a.duration || 0,
@@ -41,7 +43,8 @@ export async function GET(req: NextRequest) {
         confidence: a.confidence ?? null,
         continuity: a.continuity ?? null
       },
-      overallScore: a.overallScore ?? 0
+      overallScore: a.overallScore ?? 0,
+      aiAnalysis: a.aiAnalysis ? JSON.parse(a.aiAnalysis) : null
     }))
 
     return NextResponse.json({ success: true, data: history })

@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
+import { config } from 'dotenv'
+import { resolve } from 'path'
+
+// 在API路由中手動加載環境變量
+config({ path: resolve(process.cwd(), '.env') })
 
 function extractFirstJson(raw: string): any | null {
   if (!raw) return null
@@ -164,9 +169,10 @@ async function callOpenAIWithRetry(prompt: string, maxRetries: number = 3) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { resume } = await req.json()
+    const { resume, resumeText } = await req.json()
+    const content = resume || resumeText
     
-    if (!resume) {
+    if (!content) {
       return NextResponse.json({ success: false, message: "缺少履歷內容" }, { status: 400 })
     }
 
@@ -191,24 +197,39 @@ export async function POST(req: NextRequest) {
 - 內容深度（分析深度、思考深度、專業知識）
 - 具體性（具體例子、數據、成果）
 
-評分標準：
-- 90-100分：優秀，內容完整、邏輯清晰、表達專業
-- 80-89分：良好，內容較完整、邏輯較清晰
-- 70-79分：中等，內容基本完整、邏輯基本清晰
-- 60-69分：及格，內容基本符合要求
-- 60分以下：不及格，內容不符合要求
+評分標準（請嚴格按照以下標準評分，不要給出過高分數）：
+- 95-100分：卓越，內容極其完整、邏輯極其清晰、表達極其專業、有獨特見解
+- 90-94分：優秀，內容完整、邏輯清晰、表達專業、有個人特色
+- 85-89分：良好，內容較完整、邏輯較清晰、表達較專業
+- 80-84分：中等偏上，內容基本完整、邏輯基本清晰、表達基本專業
+- 75-79分：中等，內容基本符合要求、邏輯基本清晰
+- 70-74分：中等偏下，內容基本符合要求但有所不足
+- 65-69分：及格，內容勉強符合要求
+- 60-64分：及格邊緣，內容有明顯不足
+- 60分以下：不及格，內容不符合基本要求
+
+請注意：
+1. 大部分學生應該落在70-85分區間
+2. 90分以上應該非常罕見，只有真正優秀的內容才能獲得
+3. 如果內容有明顯問題（如邏輯混亂、表達不清、內容空洞），請給出相應的低分
+4. 每個面向的評分都要有充分的理由和具體的改進建議
 
 請你只回傳純JSON，前後不要有任何說明、標題、註解或多餘文字，否則會導致解析失敗。
 
 自傳內容：
-${resume}`
+${content}`
 
     const result = await callOpenAIWithRetry(prompt)
     
-    return NextResponse.json({
+    return new NextResponse(JSON.stringify({
       success: true,
       result,
       message: "分析完成"
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
     })
   } catch (error) {
     console.error("履歷評分分析失敗:", error)

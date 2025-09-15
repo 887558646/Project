@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
+import { config } from 'dotenv'
+import { resolve } from 'path'
+
+// 在API路由中手動加載環境變量
+config({ path: resolve(process.cwd(), '.env') })
 
 export async function POST(req: NextRequest) {
-  const { resume } = await req.json()
+  const { resume, resumeText } = await req.json()
+  const content = resume || resumeText
   const apiKey = process.env.OPENAI_API_KEY
-  if (!resume || !apiKey) return NextResponse.json({ success: false, message: "缺少內容或API Key" }, { status: 400 })
+  if (!content || !apiKey) return NextResponse.json({ success: false, message: "缺少內容或API Key" }, { status: 400 })
 
   const prompt = `你是一位資深的資管系教授，請針對下方自傳內容提供專業的改進建議。
 
@@ -27,7 +33,7 @@ export async function POST(req: NextRequest) {
 請直接回傳改進後的完整內容，不要添加任何說明或標題。內容應該保持適當的長度（約800-1200字），結構清晰，表達專業。
 
 原始內容：
-${resume}`
+${content}`
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -63,10 +69,15 @@ ${resume}`
 
     console.log("OpenAI Rewrite Response:", result) // 調試用
 
-    return NextResponse.json({ 
+    return new NextResponse(JSON.stringify({ 
       success: true, 
       result,
       message: "重寫建議完成"
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
     })
   } catch (error) {
     console.error("重寫建議失敗:", error)

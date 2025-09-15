@@ -106,6 +106,7 @@ model SelfIntroAnalysis {
   confidence    Float?   // 自信度（分）
   continuity    Float?   // 語音連續性（分）
   overallScore  Float?   // 總體評分
+  aiAnalysis    String?  @db.Text // GPT分析結果（JSON格式）
   createdAt     DateTime @default(now())
 
   user          User     @relation(fields: [userId], references: [id])

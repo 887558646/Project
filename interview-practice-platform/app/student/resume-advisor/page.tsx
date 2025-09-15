@@ -77,7 +77,7 @@ export default function ResumeAdvisor() {
       const response = await fetch(`/api/resume-analysis/history?username=${username}`)
       const data = await response.json()
       if (data.success) {
-        setHistory(data.data)
+        setHistory(data.data || [])
       }
     } catch (error) {
       console.error("獲取歷史記錄失敗:", error)
@@ -153,25 +153,25 @@ export default function ResumeAdvisor() {
 
       // 處理結果
       if (scoreData.success) {
-        setScoreResult(scoreData.data)
+        setScoreResult(scoreData.result || scoreData.data)
       } else {
         setScoreError(scoreData.message || "評分分析失敗")
       }
 
       if (issuesData.success) {
-        setIssuesResult(issuesData.data)
+        setIssuesResult(issuesData.result || issuesData.data)
       } else {
         setIssuesError(issuesData.message || "問題標註失敗")
       }
 
       if (rewriteData.success) {
-        setRewriteResult(rewriteData.data)
+        setRewriteResult(rewriteData.result || rewriteData.data)
       } else {
         setRewriteError(rewriteData.message || "重寫建議失敗")
       }
 
       if (structureData.success) {
-        setStructureResult(structureData.data)
+        setStructureResult(structureData.result || structureData.data)
       } else {
         setStructureError(structureData.message || "結構分析失敗")
       }
@@ -234,27 +234,32 @@ export default function ResumeAdvisor() {
     if (!username || !resumeText.trim()) return
     setSaving(true)
     try {
-      const content = `【原始備審資料內容】\n${resumeText}\n\n【AI分析結果】\n整體評分：${scoreResult?.overallScore || 0}/100\n\n【重寫建議】\n${rewriteResult}\n\n【問題標註】\n${issuesResult?.map((issue: any) => `- ${issue.text}: ${issue.suggestion}`).join('\n') || '無'}`
-      
-      await fetch("/api/resume-analysis/save", {
+      const response = await fetch("/api/resume-analysis/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username,
-          content,
-          analysis: {
-            score: scoreResult?.overallScore || 0,
-            issues: issuesResult || [],
-            rewrite: rewriteResult,
-            structure: structureResult
+          originalText: resumeText,
+          analysisResults: {
+            scoreResult: scoreResult,
+            issuesResult: issuesResult || [],
+            rewriteResult: rewriteResult,
+            structureResult: structureResult
           }
         })
       })
       
-      // 重新獲取歷史記錄
-      await fetchHistory(username)
+      const data = await response.json()
+      if (data.success) {
+        alert("分析結果已保存！")
+        // 重新獲取歷史記錄
+        await fetchHistory(username)
+      } else {
+        alert("保存失敗：" + data.message)
+      }
     } catch (error) {
       console.error("保存失敗:", error)
+      alert("保存失敗，請稍後重試")
     } finally {
       setSaving(false)
     }
@@ -425,6 +430,63 @@ export default function ResumeAdvisor() {
                 </CardContent>
               </Card>
 
+              {/* 評分標準說明 */}
+              <Card className="bg-white/80 backdrop-blur-sm border border-amber-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
+                <CardHeader className="bg-gradient-to-br from-amber-50 to-yellow-50 border-b border-amber-100/50">
+                  <CardTitle className="flex items-center gap-3 text-amber-700">
+                    <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-xl flex items-center justify-center">
+                      <Target className="w-4 h-4 text-white" />
+                    </div>
+                    評分標準說明
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="text-center p-3 bg-gradient-to-r from-yellow-100 to-yellow-200 rounded-lg">
+                      <div className="text-lg font-bold text-yellow-800">95-100</div>
+                      <div className="text-sm text-yellow-700">卓越</div>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-r from-green-100 to-green-200 rounded-lg">
+                      <div className="text-lg font-bold text-green-800">90-94</div>
+                      <div className="text-sm text-green-700">優秀</div>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-r from-blue-100 to-blue-200 rounded-lg">
+                      <div className="text-lg font-bold text-blue-800">85-89</div>
+                      <div className="text-sm text-blue-700">良好</div>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-r from-indigo-100 to-indigo-200 rounded-lg">
+                      <div className="text-lg font-bold text-indigo-800">80-84</div>
+                      <div className="text-sm text-indigo-700">中等偏上</div>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-r from-purple-100 to-purple-200 rounded-lg">
+                      <div className="text-lg font-bold text-purple-800">75-79</div>
+                      <div className="text-sm text-purple-700">中等</div>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-r from-pink-100 to-pink-200 rounded-lg">
+                      <div className="text-lg font-bold text-pink-800">70-74</div>
+                      <div className="text-sm text-pink-700">中等偏下</div>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-r from-orange-100 to-orange-200 rounded-lg">
+                      <div className="text-lg font-bold text-orange-800">65-69</div>
+                      <div className="text-sm text-orange-700">及格</div>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-r from-red-100 to-red-200 rounded-lg">
+                      <div className="text-lg font-bold text-red-800">60-64</div>
+                      <div className="text-sm text-red-700">及格邊緣</div>
+                    </div>
+                    <div className="text-center p-3 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg">
+                      <div className="text-lg font-bold text-gray-800">60以下</div>
+                      <div className="text-sm text-gray-700">不及格</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <p className="text-sm text-amber-800">
+                      <strong>注意：</strong>評分標準已調整為更嚴謹的標準，大部分學生應落在70-85分區間，90分以上為真正優秀的內容。
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
               {/* 分析项目说明 */}
               <Card className="bg-white/80 backdrop-blur-sm border border-blue-200/50 shadow-xl rounded-3xl overflow-hidden group hover:shadow-2xl transition-all duration-500">
                 <CardHeader className="bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-blue-100/50">
@@ -519,8 +581,22 @@ export default function ResumeAdvisor() {
                   {scoreResult && (
                     <>
                       <div className="text-center mb-6">
-                        <div className="text-4xl font-bold text-purple-600">{scoreResult.overallScore}</div>
+                        <div className="text-4xl font-bold text-purple-600">{scoreResult.overallScore || 'N/A'}</div>
                         <div className="text-gray-600">/ 100</div>
+                        <div className="mt-2">
+                          {(() => {
+                            const score = scoreResult.overallScore || 0;
+                            if (score >= 95) return <span className="inline-block px-3 py-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white text-sm font-semibold rounded-full">卓越</span>;
+                            if (score >= 90) return <span className="inline-block px-3 py-1 bg-gradient-to-r from-green-400 to-green-500 text-white text-sm font-semibold rounded-full">優秀</span>;
+                            if (score >= 85) return <span className="inline-block px-3 py-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white text-sm font-semibold rounded-full">良好</span>;
+                            if (score >= 80) return <span className="inline-block px-3 py-1 bg-gradient-to-r from-indigo-400 to-indigo-500 text-white text-sm font-semibold rounded-full">中等偏上</span>;
+                            if (score >= 75) return <span className="inline-block px-3 py-1 bg-gradient-to-r from-purple-400 to-purple-500 text-white text-sm font-semibold rounded-full">中等</span>;
+                            if (score >= 70) return <span className="inline-block px-3 py-1 bg-gradient-to-r from-pink-400 to-pink-500 text-white text-sm font-semibold rounded-full">中等偏下</span>;
+                            if (score >= 65) return <span className="inline-block px-3 py-1 bg-gradient-to-r from-orange-400 to-orange-500 text-white text-sm font-semibold rounded-full">及格</span>;
+                            if (score >= 60) return <span className="inline-block px-3 py-1 bg-gradient-to-r from-red-400 to-red-500 text-white text-sm font-semibold rounded-full">及格邊緣</span>;
+                            return <span className="inline-block px-3 py-1 bg-gradient-to-r from-gray-400 to-gray-500 text-white text-sm font-semibold rounded-full">不及格</span>;
+                          })()}
+                        </div>
                       </div>
                       <div className="space-y-4">
                         {scoreResult.categories?.map((category: any, index: number) => (
@@ -759,6 +835,20 @@ export default function ResumeAdvisor() {
                           <div className="text-right">
                             <div className="text-2xl font-bold text-purple-600">{item.overallScore}</div>
                             <div className="text-xs text-gray-500">/ 100</div>
+                            <div className="mt-1">
+                              {(() => {
+                                const score = item.overallScore || 0;
+                                if (score >= 95) return <span className="inline-block px-2 py-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white text-xs font-semibold rounded-full">卓越</span>;
+                                if (score >= 90) return <span className="inline-block px-2 py-1 bg-gradient-to-r from-green-400 to-green-500 text-white text-xs font-semibold rounded-full">優秀</span>;
+                                if (score >= 85) return <span className="inline-block px-2 py-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white text-xs font-semibold rounded-full">良好</span>;
+                                if (score >= 80) return <span className="inline-block px-2 py-1 bg-gradient-to-r from-indigo-400 to-indigo-500 text-white text-xs font-semibold rounded-full">中等偏上</span>;
+                                if (score >= 75) return <span className="inline-block px-2 py-1 bg-gradient-to-r from-purple-400 to-purple-500 text-white text-xs font-semibold rounded-full">中等</span>;
+                                if (score >= 70) return <span className="inline-block px-2 py-1 bg-gradient-to-r from-pink-400 to-pink-500 text-white text-xs font-semibold rounded-full">中等偏下</span>;
+                                if (score >= 65) return <span className="inline-block px-2 py-1 bg-gradient-to-r from-orange-400 to-orange-500 text-white text-xs font-semibold rounded-full">及格</span>;
+                                if (score >= 60) return <span className="inline-block px-2 py-1 bg-gradient-to-r from-red-400 to-red-500 text-white text-xs font-semibold rounded-full">及格邊緣</span>;
+                                return <span className="inline-block px-2 py-1 bg-gradient-to-r from-gray-400 to-gray-500 text-white text-xs font-semibold rounded-full">不及格</span>;
+                              })()}
+                            </div>
                           </div>
                         </div>
                         <p className="text-sm text-gray-600 line-clamp-2">

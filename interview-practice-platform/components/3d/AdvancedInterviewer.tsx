@@ -2,10 +2,10 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { OrbitControls, Text, Sphere, Box, Cylinder, Environment, Float } from '@react-three/drei'
+import { OrbitControls, Text, Sphere, Box, Cylinder, Environment, Float, Torus, Cone } from '@react-three/drei'
 import * as THREE from 'three'
 
-// 高级3D头部模型组件
+// 高級3D頭部模型組件
 function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: { 
   isSpeaking: boolean; 
   isMuted: boolean;
@@ -24,17 +24,17 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
   const leftCheekRef = useRef<THREE.Mesh>(null)
   const rightCheekRef = useRef<THREE.Mesh>(null)
 
-  // 头部自然摆动动画
+  // 頭部自然擺動動畫
   useFrame((state) => {
     if (headRef.current) {
-      // 更自然的头部摆动
+      // 更自然的頭部擺動
       headRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.08
       headRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.2) * 0.03
       headRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.4) * 0.02
     }
   })
 
-  // 眨眼动画
+  // 眨眼動畫
   useFrame((state) => {
     if (leftEyeRef.current && rightEyeRef.current) {
       const blink = Math.sin(state.clock.elapsedTime * 1.5) > 0.9 ? 0.05 : 1
@@ -43,7 +43,7 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
     }
   })
 
-  // 眉毛表情动画
+  // 眉毛表情動畫
   useFrame((state) => {
     if (leftEyebrowRef.current && rightEyebrowRef.current) {
       let eyebrowMovement = 0
@@ -67,13 +67,13 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
     }
   })
 
-  // 说话时的嘴部动画
+  // 說話時的嘴部動畫
   useFrame((state) => {
     if (mouthRef.current && isSpeaking && !isMuted) {
       const scale = 1 + Math.sin(state.clock.elapsedTime * 10) * 0.4
       mouthRef.current.scale.set(scale, scale, 1)
     } else if (mouthRef.current) {
-      // 根据情绪调整嘴部形状
+      // 根據情緒調整嘴部形狀
       let mouthScale = 1
       switch (emotion) {
         case 'happy':
@@ -89,14 +89,14 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
     }
   })
 
-  // 鼻子轻微动画
+  // 鼻子輕微動畫
   useFrame((state) => {
     if (noseRef.current) {
       noseRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.5) * 0.02
     }
   })
 
-  // 脸颊动画
+  // 臉頰動畫
   useFrame((state) => {
     if (leftCheekRef.current && rightCheekRef.current) {
       const cheekMovement = Math.sin(state.clock.elapsedTime * 0.3) * 0.01
@@ -107,7 +107,7 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
 
   return (
     <group>
-      {/* 头部主体 */}
+      {/* 頭部主體 */}
       <mesh ref={headRef} position={[0, 0, 0]}>
         <sphereGeometry args={[1, 32, 32]} />
         <meshStandardMaterial 
@@ -117,7 +117,7 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
         />
       </mesh>
 
-      {/* 头发（灰白） */}
+      {/* 頭髮（灰白） */}
       <mesh ref={hairRef} position={[0, 0.9, 0]}>
         <sphereGeometry args={[1.05, 32, 32]} />
         <meshStandardMaterial 
@@ -126,7 +126,7 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
           metalness={0.0}
         />
       </mesh>
-      {/* 侧边鬓角 */}
+      {/* 側邊鬢角 */}
       <mesh position={[-0.95, 0.3, 0]}>
         <boxGeometry args={[0.25, 0.6, 0.4]} />
         <meshStandardMaterial color="#bdc3c7" />
@@ -176,15 +176,13 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
         <meshStandardMaterial color="#7f8c8d" />
       </mesh>
 
-      {/* 眼鏡框 */}
-      <mesh position={[-0.3, 0.2, 0.88]}>
-        <torusGeometry args={[0.18, 0.02, 16, 32]} />
-        <meshStandardMaterial color="#2c3e50" />
-      </mesh>
-      <mesh position={[0.3, 0.2, 0.88]}>
-        <torusGeometry args={[0.18, 0.02, 16, 32]} />
-        <meshStandardMaterial color="#2c3e50" />
-      </mesh>
+             {/* 眼鏡框 */}
+       <Torus args={[0.18, 0.02, 16, 32]} position={[-0.3, 0.2, 0.88]}>
+         <meshStandardMaterial color="#2c3e50" />
+       </Torus>
+       <Torus args={[0.18, 0.02, 16, 32]} position={[0.3, 0.2, 0.88]}>
+         <meshStandardMaterial color="#2c3e50" />
+       </Torus>
       {/* 眼鏡橋與鏡腳 */}
       <mesh position={[0, 0.2, 0.88]}>
         <boxGeometry args={[0.1, 0.02, 0.02]} />
@@ -221,11 +219,10 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
         <meshStandardMaterial color="#7f8c8d" />
       </mesh>
 
-      {/* 山羊鬍/下巴鬍 */}
-      <mesh position={[0, -0.55, 0.75]}>
-        <coneGeometry args={[0.15, 0.25, 16]} />
-        <meshStandardMaterial color="#95a5a6" />
-      </mesh>
+             {/* 山羊鬍/下巴鬍 */}
+       <Cone args={[0.15, 0.25, 16]} position={[0, -0.55, 0.75]}>
+         <meshStandardMaterial color="#95a5a6" />
+       </Cone>
 
       {/* 耳朵 */}
       <mesh ref={leftEarRef} position={[-1.1, 0, 0]}>
@@ -237,7 +234,7 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
         <meshStandardMaterial color="#f4d03f" />
       </mesh>
 
-      {/* 脸颊 */}
+      {/* 臉頰 */}
       <mesh ref={leftCheekRef} position={[-0.8, -0.2, 0.6]}>
         <sphereGeometry args={[0.15, 16, 16]} />
         <meshStandardMaterial color="#e67e22" opacity={0.3} transparent />
@@ -270,7 +267,7 @@ function AdvancedHeadModel({ isSpeaking, isMuted, emotion }: {
   )
 }
 
-// 语音波形可视化组件
+// 語音波形可視化組件
 function VoiceWaveform({ isSpeaking, isMuted }: { isSpeaking: boolean; isMuted: boolean }) {
   const waveformRef = useRef<THREE.Group>(null)
 
@@ -303,7 +300,7 @@ function VoiceWaveform({ isSpeaking, isMuted }: { isSpeaking: boolean; isMuted: 
   )
 }
 
-// 环境粒子效果
+// 環境粒子效果
 function ParticleField() {
   const particlesRef = useRef<THREE.Points>(null)
 
@@ -343,7 +340,7 @@ function ParticleField() {
   )
 }
 
-// 主3D场景
+// 主3D場景
 function AdvancedScene({ 
   isSpeaking, 
   isMuted, 
@@ -357,28 +354,28 @@ function AdvancedScene({
 }) {
   return (
     <>
-      {/* 环境光 */}
+      {/* 環境光 */}
       <ambientLight intensity={0.4} />
       
       {/* 主方向光 */}
       <directionalLight position={[10, 10, 5]} intensity={1.2} castShadow />
       
-      {/* 补光 */}
+      {/* 補光 */}
       <directionalLight position={[-5, 5, 5]} intensity={0.5} />
       <directionalLight position={[0, -5, 5]} intensity={0.3} />
       
-      {/* 点光源 */}
+      {/* 點光源 */}
       <pointLight position={[0, 2, 2]} intensity={0.8} color="#9b59b6" />
       
-      {/* 3D面试官头部 */}
+      {/* 3D面試官頭部 */}
       <Float speed={1.5} rotationIntensity={0.5} floatIntensity={0.5}>
         <AdvancedHeadModel isSpeaking={isSpeaking} isMuted={isMuted} emotion={emotion} />
       </Float>
       
-      {/* 语音波形 */}
+      {/* 語音波形 */}
       <VoiceWaveform isSpeaking={isSpeaking} isMuted={isMuted} />
       
-      {/* 环境粒子 */}
+      {/* 環境粒子 */}
       <ParticleField />
       
       {/* 控制器 */}
@@ -396,7 +393,7 @@ function AdvancedScene({
   )
 }
 
-// 主组件
+// 主組件
 interface AdvancedVirtualInterviewerProps {
   isSpeaking: boolean
   isMuted: boolean
@@ -414,13 +411,13 @@ export default function AdvancedVirtualInterviewer({
 }: AdvancedVirtualInterviewerProps) {
   const [emotion, setEmotion] = useState<'neutral' | 'happy' | 'serious' | 'thinking'>('neutral')
 
-  // 根据消息内容调整情绪
+  // 根據消息內容調整情緒
   useEffect(() => {
-    if (message.includes('很好') || message.includes('优秀') || message.includes('棒')) {
+    if (message.includes('很好') || message.includes('優秀') || message.includes('棒')) {
       setEmotion('happy')
-    } else if (message.includes('注意') || message.includes('改进') || message.includes('问题')) {
+    } else if (message.includes('注意') || message.includes('改進') || message.includes('問題')) {
       setEmotion('serious')
-    } else if (message.includes('思考') || message.includes('分析') || message.includes('考虑')) {
+    } else if (message.includes('思考') || message.includes('分析') || message.includes('考慮')) {
       setEmotion('thinking')
     } else {
       setEmotion('neutral')
@@ -444,44 +441,44 @@ export default function AdvancedVirtualInterviewer({
         </Canvas>
       </div>
       
-      {/* 状态显示 */}
+      {/* 狀態顯示 */}
       <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-4 py-3 rounded-xl shadow-lg border border-white/30">
         <div className="flex items-center gap-2 mb-2">
           <div className={`w-3 h-3 rounded-full ${
             isSpeaking ? 'bg-green-500 animate-pulse' : 
             isMuted ? 'bg-red-500' : 'bg-blue-500'
           }`} />
-          <p className="text-sm font-semibold text-gray-800">
-            {isSpeaking ? "正在朗读题目" : isMuted ? "已静音" : "准备就绪"}
-          </p>
+                     <p className="text-sm font-semibold text-gray-800">
+             {isSpeaking ? "正在朗讀題目" : isMuted ? "已靜音" : "準備就緒"}
+           </p>
         </div>
         <p className="text-xs text-gray-600 max-w-xs">{message}</p>
       </div>
       
-      {/* 情绪指示器 */}
+      {/* 情緒指示器 */}
       <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-xl shadow-lg border border-white/30">
-        <p className="text-xs text-gray-600 mb-1">情绪状态</p>
+                 <p className="text-xs text-gray-600 mb-1">情緒狀態</p>
         <p className="text-sm font-medium text-purple-600">
-          {emotion === 'happy' ? '😊 开心' :
-           emotion === 'serious' ? '😐 严肃' :
-           emotion === 'thinking' ? '🤔 思考' : '😐 中性'}
+                     {emotion === 'happy' ? '😊 開心' :
+            emotion === 'serious' ? '😐 嚴肅' :
+            emotion === 'thinking' ? '🤔 思考' : '😐 中性'}
         </p>
       </div>
       
-      {/* 控制按钮 */}
+      {/* 控制按鈕 */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-3">
         <button
           onClick={onSpeak}
           disabled={isSpeaking}
           className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-indigo-500 hover:to-purple-500 text-white rounded-xl text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl"
         >
-          {isSpeaking ? "朗读中..." : "朗读题目"}
+                     {isSpeaking ? "朗讀中..." : "朗讀題目"}
         </button>
         <button
           onClick={onToggleMute}
           className="px-6 py-3 border-2 border-purple-200 text-purple-600 rounded-xl text-sm font-medium hover:bg-purple-50 transition-all duration-300 shadow-lg hover:shadow-xl"
         >
-          {isMuted ? "取消静音" : "静音"}
+                     {isMuted ? "取消靜音" : "靜音"}
         </button>
       </div>
     </div>

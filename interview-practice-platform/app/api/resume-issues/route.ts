@@ -1,4 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
+import { config } from 'dotenv'
+import { resolve } from 'path'
+
+// 在API路由中手動加載環境變量
+config({ path: resolve(process.cwd(), '.env') })
 
 function extractFirstJson(raw: string): any | null {
   if (!raw) return null
@@ -52,9 +57,10 @@ function extractFirstJson(raw: string): any | null {
 }
 
 export async function POST(req: NextRequest) {
-  const { resume } = await req.json()
+  const { resume, resumeText } = await req.json()
+  const content = resume || resumeText
   const apiKey = process.env.OPENAI_API_KEY
-  if (!resume || !apiKey) return NextResponse.json({ success: false, message: "缺少內容或API Key" }, { status: 400 })
+  if (!content || !apiKey) return NextResponse.json({ success: false, message: "缺少內容或API Key" }, { status: 400 })
 
   const prompt = `你是一位資深的資管系教授，請針對下方自傳內容進行詳細的問題標註。
 
@@ -90,7 +96,7 @@ export async function POST(req: NextRequest) {
 請你只回傳純JSON，前後不要有任何說明、標題、註解或多餘文字，否則會導致解析失敗。
 
 自傳內容：
-${resume}`
+${content}`
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -147,10 +153,15 @@ ${resume}`
       ]
     }
 
-    return NextResponse.json({ 
+    return new NextResponse(JSON.stringify({ 
       success: true, 
       result, 
       message: "問題標註完成"
+    }), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+      },
     })
   } catch (error) {
     console.error("問題標註失敗:", error)

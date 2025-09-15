@@ -79,12 +79,7 @@ function localFallbackAnalysis(introText: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getSession()
-    if (!session) {
-      return NextResponse.json({ success: false, message: "未授權" }, { status: 401 })
-    }
-
-    const { introText } = await req.json()
+    const { introText, username } = await req.json()
     if (!introText) {
       return NextResponse.json({ success: false, message: "缺少自我介紹內容" }, { status: 400 })
     }
@@ -96,11 +91,79 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, result, fallback: true })
     }
 
-    const prompt = `你是一位嚴謹的頂尖面試官，現在要對「自我介紹」做完整結構化分析。\n\n請嚴格遵守下列規則：\n1) 僅回傳「有效 JSON」，不得包含任何解說、前後綴、額外鍵，鍵名與結構必須「完全一致」。\n2) 分數採 0-100 整數，嚴格評分，避免寬鬆給分；如資訊不足應降低分數並在建議中點出不足。\n3) 文字一律使用繁體中文。\n\nJSON 結構（鍵名不可更動）：\n{\n  "scoreResult": {\n    "overallScore": number,\n    "categories": [\n      { "name": string, "score": number, "feedback": string, "strengths": string[], "weaknesses": string[], "suggestions": string[] }\n    ]\n  },\n  "issuesResult": [\n    { "text": string, "suggestion": string, "severity": "low"|"medium"|"high", "category": string, "reason": string, "improved_example": string }\n  ],\n  "rewriteResult": string,\n  "structureResult": [\n    { "title": string, "points": string[], "writing_tips": string, "common_mistakes": string, "word_count": string }\n  ]\n}\n\n評分標準與權重（總分 100）：\n- 邏輯結構 20\n- 動機明確度 15\n- 個人化程度 15\n- 語言表達 15\n- 內容深度 20\n- 具體性 15\n\n自我介紹內容：\\n${introText}`
+    const prompt = `你是一位資深的資管系教授，專門審查學生自我介紹。請以嚴格的標準進行評分，不要給出過高的分數。
+
+請回傳一個JSON，格式如下：
+
+{
+  "scoreResult": {
+    "overallScore": 75,
+    "categories": [
+      {
+        "name": "邏輯結構",
+        "score": 80,
+        "feedback": "段落安排基本合理，但邏輯連接可以更清晰...",
+        "strengths": ["結構基本清楚", "段落分明"],
+        "weaknesses": ["邏輯過渡不夠自然", "缺乏總結"],
+        "suggestions": ["加強段落間的連接詞", "添加總結段落"]
+      }
+    ]
+  },
+  "issuesResult": [
+    {
+      "text": "有問題的句子",
+      "suggestion": "具體改進建議...",
+      "severity": "medium",
+      "category": "vague",
+      "reason": "問題原因說明",
+      "improved_example": "改進後的句子範例"
+    }
+  ],
+  "rewriteResult": "重寫後的完整自我介紹內容...",
+  "structureResult": [
+    {
+      "title": "段落標題",
+      "points": ["重點1", "重點2"],
+      "writing_tips": "寫作建議",
+      "common_mistakes": "常見錯誤",
+      "word_count": "建議字數"
+    }
+  ]
+}
+
+評分面向包括：
+- 邏輯結構（段落安排、內容組織、邏輯流暢度）
+- 動機明確度（選擇科系的理由、未來規劃的清晰度）
+- 個人化程度（獨特性、個人特色、真實性）
+- 語言表達（用詞準確性、語句通順度、專業度）
+- 內容深度（分析深度、思考深度、專業知識）
+- 具體性（具體例子、數據、成果）
+
+評分標準（請嚴格按照以下標準評分，不要給出過高分數）：
+- 95-100分：卓越，內容極其完整、邏輯極其清晰、表達極其專業、有獨特見解
+- 90-94分：優秀，內容完整、邏輯清晰、表達專業、有個人特色
+- 85-89分：良好，內容較完整、邏輯較清晰、表達較專業
+- 80-84分：中等偏上，內容基本完整、邏輯基本清晰、表達基本專業
+- 75-79分：中等，內容基本符合要求、邏輯基本清晰
+- 70-74分：中等偏下，內容基本符合要求但有所不足
+- 65-69分：及格，內容勉強符合要求
+- 60-64分：及格邊緣，內容有明顯不足
+- 60分以下：不及格，內容不符合基本要求
+
+請注意：
+1. 大部分學生應該落在70-85分區間
+2. 90分以上應該非常罕見，只有真正優秀的內容才能獲得
+3. 如果內容有明顯問題（如邏輯混亂、表達不清、內容空洞），請給出相應的低分
+4. 每個面向的評分都要有充分的理由和具體的改進建議
+
+請你只回傳純JSON，前後不要有任何說明、標題、註解或多餘文字，否則會導致解析失敗。
+
+自我介紹內容：
+${introText}`
 
     // 添加超時控制
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30秒超時
+    const timeoutId = setTimeout(() => controller.abort(), 60000) // 60秒超時
 
     try {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -143,9 +206,23 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      console.log("OpenAI 原始響應長度:", content.length)
+      console.log("OpenAI 原始響應前500字符:", content.substring(0, 500))
+      
       const parsed = extractFirstJson(content)
+      console.log("解析後的結果類型:", typeof parsed)
+      console.log("解析後的結果:", JSON.stringify(parsed, null, 2))
+      
       if (!parsed) {
+        console.error("JSON 解析失敗，原始內容:", content)
         return NextResponse.json({ success: false, message: "AI 回傳解析失敗" }, { status: 500 })
+      }
+
+      // 檢查必要的字段，如果沒有scoreResult則使用fallback
+      if (!parsed.scoreResult) {
+        console.error("缺少 scoreResult 字段，使用本地fallback分析")
+        const fallbackResult = localFallbackAnalysis(introText)
+        return NextResponse.json({ success: true, result: fallbackResult, fallback: true })
       }
 
       return NextResponse.json({ success: true, result: parsed })
